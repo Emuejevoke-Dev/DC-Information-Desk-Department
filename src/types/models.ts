@@ -1,6 +1,7 @@
 export type UserRole =
   | 'system_admin'
   | 'department_leader'
+  | 'operations_officer'
   | 'secretary'
   | 'finance_officer'
   | 'bookstand_officer'
@@ -17,6 +18,7 @@ export interface User {
   avatarUrl?: string;
   departmentRole: string;
   permissions?: string[];
+  lastLoginAt?: string;
 }
 
 export type LostItemStatus = 'Unclaimed' | 'Claimed' | 'Returned';
@@ -61,6 +63,7 @@ export interface DepartmentMember {
   birthDay: number; // 1-31
   birthMonth: number; // 1-12
   birthYear?: number;
+  dateOfBirth?: string; // YYYY-MM-DD
   departmentRole: string; // e.g. "Front Desk Coordinator", "Cell Liaison", "Bookstand Officer"
   occupation?: string;
   phone: string;
@@ -211,6 +214,7 @@ export interface ServiceReport {
   inquiriesHandled: number;
   cellConnectionsCount: number;
   lostItemsLogged: number;
+  customMetrics?: Record<string, number>;
   activitiesCarriedOut: string;
   observations: string;
   issuesEncountered: string;
@@ -288,6 +292,25 @@ export interface CollectionEntry {
   data: Record<string, string | number>;
   submittedBy: string;
   submittedAt: string;
+}
+
+export interface TableDocumentRow {
+  id: string;
+  sn: number;
+  values: Record<string, string>;
+}
+
+export interface TableDocument {
+  id: string;
+  title: string;
+  department: string;
+  date: string;
+  optionalInfo?: string;
+  columns: string[]; // e.g. ["Name", "Surname", "Type of Document"]
+  rows: TableDocumentRow[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
 
 export type TransactionType = 'Income' | 'Expense';

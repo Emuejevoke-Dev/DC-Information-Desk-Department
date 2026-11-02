@@ -6,7 +6,9 @@ import {
   getNextSunday,
   getNextThursdayPrayer,
   formatDate,
+  formatLagosDateTime,
 } from '../../utils/dateUtils';
+import { formatNaira } from '../../utils/formatters';
 import confetti from 'canvas-confetti';
 import {
   Calendar,
@@ -34,6 +36,10 @@ import {
   Check,
   ChevronRight,
   Sparkle,
+  BookOpen,
+  ShoppingBag,
+  BarChart3,
+  Search,
 } from 'lucide-react';
 import { EventFlyerCarousel } from './EventFlyerCarousel';
 import { MyProfileModal } from '../members/MyProfileModal';
@@ -49,10 +55,12 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
 }) => {
   const {
     currentUser,
+    loginTimestamp,
     canManageReports,
     canManageAttendance,
     canManageUniforms,
     isHOD,
+    isOperations,
     isSecretary,
   } = useAuth();
 
@@ -66,6 +74,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
     reports,
     collections,
     attendance,
+    books,
     addAttendanceRecord,
   } = useData();
 
@@ -73,6 +82,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isRecordItemModalOpen, setIsRecordItemModalOpen] = useState(false);
   const [showAbsentList, setShowAbsentList] = useState(false);
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
 
   const today = new Date();
   const nextSunday = getNextSunday(today);
@@ -245,6 +255,19 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
               </span>
               .
             </p>
+
+            {/* Accurate Nigerian Timezone (WAT, Africa/Lagos) Login Timestamp */}
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-900/80 border border-blue-400/40 text-xs font-semibold text-blue-100 shadow-xs">
+                <Clock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>
+                  Signed In: <strong className="text-white font-bold">{loginTimestamp ? formatLagosDateTime(loginTimestamp) : formatLagosDateTime(today)}</strong>
+                </span>
+              </span>
+              <span className="text-[11px] text-blue-300 hidden sm:inline">
+                (WAT • Africa/Lagos Session)
+              </span>
+            </div>
           </div>
 
           {/* Quick Action Buttons (Compact ~34px, 12px padding, subtle glow) */}
@@ -762,10 +785,345 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 7. Operations Highlights: Sunday Roster & Weekly Prayer Routine           */}
+      {/* 6. TODAY'S INFORMATION DESK SERVICE REPORT (Desk A, Desk B & Combined)    */}
+      {/* ========================================================================= */}
+      {(() => {
+        // Today's Service Reports
+        const todayReports = reports.filter((r) => r.serviceDate === todayStr && r.status === 'Submitted');
+        const hasReports = todayReports.length > 0;
+
+        // Wing distinction
+        const deskAReports = todayReports.filter((r) => r.reportingWing === 'Desk A — Left Wing');
+        const deskBReports = todayReports.filter((r) => r.reportingWing === 'Desk B — Right Wing');
+
+        // Service distinction
+        const firstServiceReports = todayReports.filter((r) => r.serviceType === 'Sunday 1st Service');
+        const secondServiceReports = todayReports.filter((r) => r.serviceType === 'Sunday 2nd Service');
+
+        // Desk A totals
+        const deskATraffic = deskAReports.reduce((acc, r) => acc + (r.deskAttendanceCount || 0), 0);
+        const deskAInquiries = deskAReports.reduce((acc, r) => acc + (r.inquiriesHandled || 0), 0);
+        const deskACells = deskAReports.reduce((acc, r) => acc + (r.cellConnectionsCount || 0), 0);
+        const deskALost = deskAReports.reduce((acc, r) => acc + (r.lostItemsLogged || 0), 0);
+        const deskATotal = deskATraffic + deskAInquiries + deskACells + deskALost;
+
+        // Desk B totals
+        const deskBTraffic = deskBReports.reduce((acc, r) => acc + (r.deskAttendanceCount || 0), 0);
+        const deskBInquiries = deskBReports.reduce((acc, r) => acc + (r.inquiriesHandled || 0), 0);
+        const deskBCells = deskBReports.reduce((acc, r) => acc + (r.cellConnectionsCount || 0), 0);
+        const deskBLost = deskBReports.reduce((acc, r) => acc + (r.lostItemsLogged || 0), 0);
+        const deskBTotal = deskBTraffic + deskBInquiries + deskBCells + deskBLost;
+
+        // Combined Totals
+        const combinedTraffic = deskATraffic + deskBTraffic;
+        const combinedInquiries = deskAInquiries + deskBInquiries;
+        const combinedCells = deskACells + deskBCells;
+        const combinedLost = deskALost + deskBLost;
+        const grandCombinedTotal = deskATotal + deskBTotal;
+
+        const firstServiceTotal = firstServiceReports.reduce(
+          (acc, r) => acc + (r.deskAttendanceCount || 0) + (r.inquiriesHandled || 0) + (r.cellConnectionsCount || 0) + (r.lostItemsLogged || 0),
+          0
+        );
+        const secondServiceTotal = secondServiceReports.reduce(
+          (acc, r) => acc + (r.deskAttendanceCount || 0) + (r.inquiriesHandled || 0) + (r.cellConnectionsCount || 0) + (r.lostItemsLogged || 0),
+          0
+        );
+
+        return (
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-md transition-colors relative overflow-hidden">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                  <BarChart3 className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white uppercase">
+                    TODAY'S INFORMATION DESK SERVICE REPORT
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Live operational metrics for Desk A (Left Wing), Desk B (Right Wing), and combined totals
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  {formatDate(todayStr)}
+                </span>
+                {canManageReports && (
+                  <button
+                    onClick={() => onNavigate('reports')}
+                    className="btn-compact btn-glow-blue"
+                  >
+                    Manage Reports
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {!hasReports ? (
+              <div className="py-10 text-center bg-slate-50/70 dark:bg-[#131F38]/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 my-4 p-6">
+                <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  No service report submitted yet.
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                  When front desk personnel file service reports for Desk A and Desk B, verified totals and category statistics will update here automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-5">
+                {/* Prominent Combined Total Hero Card */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border border-blue-700/50">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950">
+                      COMBINED DEPARTMENT TOTAL
+                    </span>
+                    <h4 className="text-2xl sm:text-3xl font-black mt-1">
+                      {grandCombinedTotal} Total Engagements
+                    </h4>
+                    <p className="text-xs text-blue-200 mt-0.5">
+                      Aggregated across Desk A and Desk B today
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-center">
+                    <div className="px-4 py-2 rounded-xl bg-white/10 border border-white/10">
+                      <span className="text-[10px] font-bold text-blue-200 uppercase block">1st Service</span>
+                      <span className="text-lg font-black text-white">{firstServiceTotal}</span>
+                    </div>
+                    <div className="px-4 py-2 rounded-xl bg-white/10 border border-white/10">
+                      <span className="text-[10px] font-bold text-blue-200 uppercase block">2nd Service</span>
+                      <span className="text-lg font-black text-white">{secondServiceTotal}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desk A vs Desk B Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Desk A Card */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <h5 className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
+                        Desk A — Left Wing ({deskAReports.length} reports)
+                      </h5>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        {deskATotal} total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-center">
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Traffic</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskATraffic}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Inquiries</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskAInquiries}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Cells</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskACells}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Lost Items</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskALost}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desk B Card */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <h5 className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase">
+                        Desk B — Right Wing ({deskBReports.length} reports)
+                      </h5>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        {deskBTotal} total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-center">
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Traffic</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskBTraffic}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Inquiries</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskBInquiries}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Cells</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskBCells}</span>
+                      </div>
+                      <div className="p-2 bg-white dark:bg-[#0E172B] rounded-lg border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Lost Items</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{deskBLost}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Categories Summary Table */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="p-3">Report Category</th>
+                        <th className="p-3 text-center">Desk A (Left Wing)</th>
+                        <th className="p-3 text-center">Desk B (Right Wing)</th>
+                        <th className="p-3 text-right font-black">Combined Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
+                      <tr>
+                        <td className="p-3 font-semibold">Desk Traffic / Attendance</td>
+                        <td className="p-3 text-center">{deskATraffic}</td>
+                        <td className="p-3 text-center">{deskBTraffic}</td>
+                        <td className="p-3 text-right font-bold text-blue-600 dark:text-blue-400">{combinedTraffic}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold">Inquiries Handled</td>
+                        <td className="p-3 text-center">{deskAInquiries}</td>
+                        <td className="p-3 text-center">{deskBInquiries}</td>
+                        <td className="p-3 text-right font-bold text-blue-600 dark:text-blue-400">{combinedInquiries}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold">Cell Connections</td>
+                        <td className="p-3 text-center">{deskACells}</td>
+                        <td className="p-3 text-center">{deskBCells}</td>
+                        <td className="p-3 text-right font-bold text-blue-600 dark:text-blue-400">{combinedCells}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold">Lost Items Logged</td>
+                        <td className="p-3 text-center">{deskALost}</td>
+                        <td className="p-3 text-center">{deskBLost}</td>
+                        <td className="p-3 text-right font-bold text-blue-600 dark:text-blue-400">{combinedLost}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ========================================================================= */}
+      {/* 7. BOOKSTAND – AVAILABLE BOOKS (Member Inventory View - Prompt Phase 9)   */}
+      {/* ========================================================================= */}
+      <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-md transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+              <ShoppingBag className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white uppercase">
+                  BOOKSTAND – AVAILABLE BOOKS
+                </h3>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                  {books.length} Titles Listed
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Explore recommended kingdom literature, pricing, and current stock at the Information Desk
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-60">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search books by title..."
+                value={bookSearchQuery}
+                onChange={(e) => setBookSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-purple-600 font-medium"
+              />
+            </div>
+            <button
+              onClick={() => onNavigate('bookstand')}
+              className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer shrink-0"
+            >
+              Bookstand Desk →
+            </button>
+          </div>
+        </div>
+
+        {/* Books Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-5">
+          {books
+            .filter((b) => {
+              if (!bookSearchQuery.trim()) return true;
+              const q = bookSearchQuery.toLowerCase();
+              return (
+                b.title.toLowerCase().includes(q) ||
+                b.author.toLowerCase().includes(q) ||
+                b.category.toLowerCase().includes(q)
+              );
+            })
+            .map((b) => (
+              <div
+                key={b.id}
+                className="bg-slate-50/60 dark:bg-[#131F38] rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col justify-between hover:shadow-md transition-all"
+              >
+                <div>
+                  <div className="relative h-40 bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <img
+                      src={b.coverPhoto}
+                      alt={b.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <span
+                      className={`absolute top-2 right-2 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase shadow-xs ${
+                        b.status === 'In Stock'
+                          ? 'bg-emerald-500 text-white'
+                          : b.status === 'Low Stock'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-rose-500 text-white'
+                      }`}
+                    >
+                      {b.status}
+                    </span>
+                  </div>
+                  <div className="p-3.5">
+                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+                      {b.category}
+                    </span>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1 line-clamp-1" title={b.title}>
+                      {b.title}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{b.author}</p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 pt-0 border-t border-slate-100 dark:border-slate-800/80 mt-2 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Retail Price</span>
+                    <span className="text-sm font-black text-purple-700 dark:text-purple-300">
+                      {formatNaira(b.sellingPrice)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block">Availability</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {b.currentStock} copies
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 8. Operations Highlights: Sunday Roster & Weekly Prayer Routine           */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* 7A. Sunday Service Roster Preview */}
+        {/* 8A. Sunday Service Roster Preview */}
         <div className="rounded-2xl p-5 shadow-xs flex flex-col justify-between card-gradient-border glow-blue-hover transition-all">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">

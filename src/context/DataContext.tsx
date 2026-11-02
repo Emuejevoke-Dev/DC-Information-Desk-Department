@@ -20,6 +20,8 @@ import {
   AttendanceRecord,
   FinalizedAttendanceReport,
   AbsenceFollowUp,
+  TableDocument,
+  TableDocumentRow,
 } from '../types/models';
 import {
   INITIAL_BOOKS,
@@ -126,9 +128,21 @@ interface DataContextType {
 
   addBook: (b: Omit<Book, 'id' | 'createdAt' | 'updatedAt' | 'currentStock' | 'quantitySold' | 'returns' | 'damagedOrMissing' | 'status'>) => void;
   updateBook: (id: string, b: Partial<Book>) => void;
+  deleteBook: (id: string) => void;
   recordBookSale: (sale: Omit<BookSale, 'id' | 'createdAt' | 'payments'>, initialPayment?: number) => void;
   recordDebtPayment: (saleId: string, amount: number, recordedBy: string, receiptNumber?: string) => void;
   addStockMovement: (sm: Omit<StockMovement, 'id' | 'createdAt'>) => void;
+
+  // Custom Report Categories
+  reportCategories: string[];
+  addReportCategory: (name: string) => void;
+  deleteReportCategory: (name: string) => void;
+
+  // Table-based Documentation Tool
+  tableDocuments: TableDocument[];
+  addTableDocument: (doc: Omit<TableDocument, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateTableDocument: (id: string, doc: Partial<TableDocument>) => void;
+  deleteTableDocument: (id: string) => void;
 
   addHandbookEntry: (hb: Omit<HandbookEntry, 'id' | 'updatedAt'>) => void;
   updateHandbookEntry: (id: string, hb: Partial<HandbookEntry>) => void;
@@ -205,6 +219,65 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     'absence_follow_ups',
     INITIAL_ABSENCE_FOLLOW_UPS
   );
+
+  // Custom service report categories (retaining the 4 core categories and allowing custom ones)
+  const [reportCategories, setReportCategories] = useStoredState<string[]>('report_categories', [
+    'Cell Connection',
+    'Desk Traffic',
+    'Inquiries',
+    'Lost Items',
+  ]);
+
+  const addReportCategory = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setReportCategories((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+  };
+
+  const deleteReportCategory = (name: string) => {
+    setReportCategories((prev) => prev.filter((c) => c !== name));
+  };
+
+  // Table-based documents for custom information & registers
+  const [tableDocuments, setTableDocuments] = useStoredState<TableDocument[]>('table_documents', [
+    {
+      id: 'doc-1',
+      title: 'Sunday Service First-Timers & Enquirers Register',
+      department: 'Information Desk Department',
+      date: new Date().toISOString().split('T')[0],
+      optionalInfo: 'Dominion City Asaba — Cathedral Main Sanctuary',
+      columns: ['Name', 'Surname', 'Phone Number', 'Type of Document / Request'],
+      rows: [
+        { id: 'r-1', sn: 1, values: { Name: 'Chidinma', Surname: 'Okafor', 'Phone Number': '08034567890', 'Type of Document / Request': 'Cell Fellowship Connection' } },
+        { id: 'r-2', sn: 2, values: { Name: 'Samuel', Surname: 'Alabi', 'Phone Number': '08123456789', 'Type of Document / Request': 'Foundation Class Registration' } },
+        { id: 'r-3', sn: 3, values: { Name: 'Joy', Surname: 'Emeka', 'Phone Number': '07098765432', 'Type of Document / Request': 'Pastoral Counselling Appointment' } },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'Brother Chukwudi Okonkwo',
+    },
+  ]);
+
+  const addTableDocument = (doc: Omit<TableDocument, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const timestamp = new Date().toISOString();
+    const newDoc: TableDocument = {
+      ...doc,
+      id: `doc-${Date.now()}`,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    setTableDocuments((prev) => [newDoc, ...prev]);
+  };
+
+  const updateTableDocument = (id: string, doc: Partial<TableDocument>) => {
+    setTableDocuments((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, ...doc, updatedAt: new Date().toISOString() } : d))
+    );
+  };
+
+  const deleteTableDocument = (id: string) => {
+    setTableDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
 
   // Attendance
   const addAttendanceRecord = (record: Omit<AttendanceRecord, 'id' | 'createdAt'>) => {
@@ -667,6 +740,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const deleteBook = (id: string) => {
+    setBooks((prev) => prev.filter((b) => b.id !== id));
+  };
+
   const addStockMovement = (sm: Omit<StockMovement, 'id' | 'createdAt'>) => {
     const newSM: StockMovement = {
       ...sm,
@@ -1006,9 +1083,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         addBook,
         updateBook,
+        deleteBook,
         recordBookSale,
         recordDebtPayment,
         addStockMovement,
+
+        reportCategories,
+        addReportCategory,
+        deleteReportCategory,
+
+        tableDocuments,
+        addTableDocument,
+        updateTableDocument,
+        deleteTableDocument,
 
         addHandbookEntry,
         updateHandbookEntry,

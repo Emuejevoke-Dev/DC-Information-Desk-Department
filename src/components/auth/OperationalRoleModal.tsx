@@ -76,13 +76,15 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
 
   if (!isOpen) return null;
 
-  // The 5 official operational roles
-  const rolesList: OperationalRole[] = ['hod', 'finance', 'uniform', 'bookstand', 'secretary'];
+  // The official operational roles including Operations Officer
+  const rolesList: OperationalRole[] = ['hod', 'operations', 'finance', 'uniform', 'bookstand', 'secretary'];
 
   const getRoleIcon = (roleId: OperationalRole) => {
     switch (roleId) {
       case 'hod':
         return <Crown className="w-5 h-5 text-amber-500" />;
+      case 'operations':
+        return <ShieldCheck className="w-5 h-5 text-cyan-400" />;
       case 'finance':
         return <Wallet className="w-5 h-5 text-emerald-500" />;
       case 'uniform':
@@ -265,8 +267,8 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
                 </p>
               </div>
 
-              {/* HOD / System Admin configuration button */}
-              {(activeOperationalRole === 'hod' || currentUser.role === 'system_admin' || currentUser.name.includes('Chukwudi')) && (
+              {/* HOD / Operations Officer / System Admin configuration button */}
+              {(activeOperationalRole === 'hod' || activeOperationalRole === 'operations' || currentUser.role === 'system_admin' || currentUser.role === 'operations_officer' || currentUser.name.includes('Chukwudi') || currentUser.name.includes('Amaka')) && (
                 <button
                   onClick={() => {
                     setAdminFeedback(null);

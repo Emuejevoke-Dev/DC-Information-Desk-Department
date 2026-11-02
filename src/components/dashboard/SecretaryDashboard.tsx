@@ -17,6 +17,9 @@ import {
   Clock,
   PlusCircle,
   ExternalLink,
+  Layers,
+  Sparkles,
+  Printer,
 } from 'lucide-react';
 
 interface SecretaryDashboardProps {
@@ -32,8 +35,7 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
   const {
     members,
     reports,
-    collections,
-    collectionEntries,
+    tableDocuments,
     rosters,
     dressCodes,
     meetings,
@@ -41,51 +43,181 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
     announcements,
   } = useData();
 
-  const openForms = collections.filter((c) => c.status === 'Open');
   const recentReports = reports.slice(0, 3);
   const pendingLostItems = lostItems.filter((i) => i.status === 'Unclaimed');
   const upcomingMeetings = meetings.filter((m) => m.status === 'Scheduled');
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Officer Header with Clear Return Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#032326] via-[#084C52] to-[#0E6C75] text-white shadow-lg border border-teal-900/40">
+      {/* Officer Header with Standardized Height Buttons and Dominion City Blue Theme */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#071738] via-[#0B2559] to-[#123A85] text-white shadow-lg border border-blue-900/50 flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
           <button
             onClick={onReturnToGeneral}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-teal-200 text-xs font-bold mb-2.5 transition-colors cursor-pointer border border-white/10"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-200 hover:text-white text-xs font-bold mb-3 transition-colors cursor-pointer border border-white/15"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Return to General Department Dashboard
+            <span>Return to General Department Dashboard</span>
           </button>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
               Secretary & Administrative Office Workspace
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-400/30 text-teal-200 border border-teal-300/30">
-              Department Administration
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-400 text-slate-950 glow-amber">
+              Official Administration
             </span>
           </div>
-          <p className="text-xs text-teal-100 mt-1 max-w-xl">
-            Central coordination of service reports, member census, cell directories, information forms, and departmental rosters.
+          <p className="text-xs text-blue-100 mt-1 max-w-xl leading-relaxed">
+            Centralized administrative portal: documentation registers, service reports, member census, duty rosters, and meeting schedules.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Standardized Action Buttons Group */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={() => onNavigate('reports')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition-all shadow-md cursor-pointer"
+            className="btn-compact bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold shadow-md glow-amber h-10 px-4"
           >
-            <PlusCircle className="w-4 h-4 text-teal-950" />
-            New Service Report
+            <PlusCircle className="w-4 h-4 text-slate-950" />
+            <span>New Service Report</span>
           </button>
           <button
             onClick={() => onNavigate('collections')}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-all cursor-pointer"
+            className="btn-compact bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/25 glow-blue-hover h-10 px-4"
           >
-            <ClipboardList className="w-3.5 h-3.5 text-teal-200" />
-            Create Collection Form
+            <ClipboardList className="w-4 h-4 text-amber-300" />
+            <span>Table Register Tool</span>
           </button>
+        </div>
+      </div>
+
+      {/* Grouped Administrative Direct Portals (Organized into Clear Logical Clusters) */}
+      <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Grouped Administrative Portals</span>
+          </h3>
+          <span className="text-[11px] text-slate-400">Quick direct access by function</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Cluster 1: Documentation & Service Reports */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#07132B] border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 block">
+              1. Documentation & Reports
+            </span>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => onNavigate('reports')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                  Service Reports (Desk A & B)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{reports.length}</span>
+              </button>
+              <button
+                onClick={() => onNavigate('collections')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                  Table Register Tool
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{tableDocuments.length}</span>
+              </button>
+              <button
+                onClick={() => onNavigate('roster')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                  Duty Rosters & Shifts
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{rosters.length}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cluster 2: Members & Personnel */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#07132B] border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">
+              2. Personnel & Members
+            </span>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => onNavigate('members')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                  Member Directory
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{members.length}</span>
+              </button>
+              <button
+                onClick={() => onNavigate('attendance')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 group-hover:scale-110 transition-transform" />
+                  Attendance Register
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold">Live</span>
+              </button>
+              <button
+                onClick={() => onNavigate('dress-code')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <CalendarCheck className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                  Sunday Dress Codes
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{dressCodes.length}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cluster 3: Church Operations & Public Front Desk */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#07132B] border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 block">
+              3. Front Desk & Church Portals
+            </span>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => onNavigate('cells')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-amber-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                  Cell & Satellite Directory
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold">Asaba</span>
+              </button>
+              <button
+                onClick={() => onNavigate('lost-found')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-amber-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <PackageSearch className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                  Lost & Found Custody
+                </span>
+                <span className="text-[10px] text-amber-600 font-mono font-bold">{pendingLostItems.length}</span>
+              </button>
+              <button
+                onClick={() => onNavigate('meetings')}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-700 hover:border-amber-500 text-xs font-bold text-slate-800 dark:text-white transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+                  Department Meetings
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono font-bold">{upcomingMeetings.length}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -94,20 +226,20 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
         {/* Members Directory */}
         <div
           onClick={() => onNavigate('members')}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-500 cursor-pointer transition-all"
+          className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-blue-500 cursor-pointer transition-all card-gradient-border"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Enrolled Members
             </span>
-            <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 font-mono">
             {members.length} Members
           </p>
-          <p className="text-[11px] text-teal-600 font-semibold mt-1">
+          <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold mt-1">
             Active department personnel
           </p>
         </div>
@@ -115,79 +247,79 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
         {/* Service Reports Logged */}
         <div
           onClick={() => onNavigate('reports')}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-500 cursor-pointer transition-all"
+          className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-blue-500 cursor-pointer transition-all card-gradient-border"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Service Reports Filed
             </span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
               <FileText className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-blue-600 mt-2">
+          <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 mt-2 font-mono">
             {reports.length} Reports
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Desk A & Desk B service logs
           </p>
         </div>
 
-        {/* Open Collection Forms */}
+        {/* Table Register Documents */}
         <div
           onClick={() => onNavigate('collections')}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-500 cursor-pointer transition-all"
+          className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-purple-500 cursor-pointer transition-all card-gradient-border"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Active Information Forms
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Table Registers
             </span>
-            <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
               <ClipboardList className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-purple-700 mt-2">
-            {openForms.length} Open
+          <p className="text-2xl sm:text-3xl font-black text-purple-700 dark:text-purple-400 mt-2 font-mono">
+            {tableDocuments.length} Saved
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {collectionEntries.length} total respondent submissions
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Official registers & forms
           </p>
         </div>
 
         {/* Unclaimed Lost Items */}
         <div
           onClick={() => onNavigate('lost-found')}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-500 cursor-pointer transition-all"
+          className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-amber-500 cursor-pointer transition-all card-gradient-border"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Lost & Found Custody
             </span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
               <PackageSearch className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2">
+          <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-2 font-mono">
             {pendingLostItems.length} In Custody
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Items safeguarded at information desk
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Safeguarded at information desk
           </p>
         </div>
       </div>
 
-      {/* Dual Administrative Highlights */}
+      {/* Dual Highlights: Recent Reports & Saved Registers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Service Reports Submitted */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Recent Service Reports</h3>
-              <p className="text-xs text-slate-500">Left & Right Wing Front Desk operational submissions</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent Service Reports</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Left & Right Wing Front Desk operational submissions</p>
             </div>
             <button
               onClick={() => onNavigate('reports')}
-              className="text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
             >
               All Reports →
             </button>
@@ -197,19 +329,19 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
             {recentReports.map((rep) => (
               <div
                 key={rep.id}
-                className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white transition-all space-y-1.5"
+                className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-[#07132B] hover:bg-white dark:hover:bg-slate-800/40 transition-all space-y-1.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900">{rep.serviceType}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded font-black uppercase bg-teal-100 text-teal-800">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">{rep.serviceType}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded font-black uppercase bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
                     {rep.reportingWing}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>Date: {formatDate(rep.serviceDate)}</span>
-                  <span>Desk Attendance: <strong>{rep.deskAttendanceCount}</strong></span>
+                  <span>Desk Attendance: <strong className="text-slate-800 dark:text-white font-mono">{rep.deskAttendanceCount}</strong></span>
                 </div>
-                <p className="text-[11px] text-slate-600 line-clamp-1 italic">
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1 italic">
                   Submitted by {rep.submittedBy}
                 </p>
               </div>
@@ -217,80 +349,45 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
           </div>
         </div>
 
-        {/* Active Information Collection Forms */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        {/* Saved Table Register Documents */}
+        <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Custom Information Collection</h3>
-              <p className="text-xs text-slate-500">Forms requested by pastors & department heads</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Active Table Registers</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Official registers and printable documentation sheets</p>
             </div>
             <button
               onClick={() => onNavigate('collections')}
-              className="text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
             >
-              Form Builder →
+              Open Tool →
             </button>
           </div>
 
           <div className="mt-4 space-y-3">
-            {collections.map((col) => (
+            {tableDocuments.map((doc) => (
               <div
-                key={col.id}
-                className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white transition-all space-y-1.5"
+                key={doc.id}
+                className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-[#07132B] hover:bg-white dark:hover:bg-slate-800/40 transition-all space-y-1.5"
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-900">{col.title}</h4>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded font-black uppercase ${
-                      col.status === 'Open'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {col.status}
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{doc.title}</h4>
+                  <span className="text-[10px] px-2 py-0.5 rounded font-black uppercase bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+                    {doc.columns.length} Cols
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 line-clamp-1">
-                  Requested by: {col.requestedBy}
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                  {doc.optionalInfo || 'Dominion City Asaba Front Desk Record'}
                 </p>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                  <span>{col.fields.length} dynamic fields</span>
-                  <span className="font-bold text-teal-700">
-                    {col.entriesCount} Submissions
+                  <span>Date: {doc.date}</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">
+                    {doc.rows.length} Rows Recorded
                   </span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Administrative Quick Actions Grid */}
-      <div className="bg-slate-100/70 rounded-2xl p-5 border border-slate-200">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-          Administrative Direct Portals
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {[
-            { id: 'members', label: 'Member Directory', icon: Users, color: 'text-blue-600' },
-            { id: 'cells', label: 'Cell Directory', icon: MapPin, color: 'text-emerald-600' },
-            { id: 'dress-code', label: 'Dress Codes', icon: CalendarCheck, color: 'text-purple-600' },
-            { id: 'roster', label: 'Service Rosters', icon: Clock, color: 'text-amber-600' },
-            { id: 'announcements', label: 'Urgent Notices', icon: Megaphone, color: 'text-rose-600' },
-            { id: 'handbook', label: 'SOP Handbook', icon: BookOpen, color: 'text-teal-600' },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className="p-3 bg-white hover:bg-blue-50/50 rounded-xl border border-slate-200 text-center transition-all cursor-pointer shadow-2xs group flex flex-col items-center justify-center gap-1.5"
-              >
-                <Icon className={`w-5 h-5 ${item.color} group-hover:scale-110 transition-transform`} />
-                <span className="text-[11px] font-bold text-slate-800">{item.label}</span>
-              </button>
-            );
-          })}
         </div>
       </div>
     </div>

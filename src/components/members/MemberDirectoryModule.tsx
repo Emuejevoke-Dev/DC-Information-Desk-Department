@@ -27,8 +27,10 @@ import {
 } from 'lucide-react';
 
 export const MemberDirectoryModule: React.FC = () => {
-  const { currentUser, canManageMembers, canViewConfidentialData } = useAuth();
+  const { currentUser, canManageMembers, canViewConfidentialData, isHOD, isOperations, isSecretary } = useAuth();
   const { members, addMember, updateMember, deleteMember } = useData();
+
+  const isAuthorized = canManageMembers || isHOD || isOperations || isSecretary;
 
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,11 +78,22 @@ export const MemberDirectoryModule: React.FC = () => {
       return;
     }
 
+    const finalDay = Number(formData.birthDay) || 1;
+    const finalMonth = Number(formData.birthMonth) || 1;
+    const finalYear = Number(formData.birthYear) || 1995;
+    const payload = {
+      ...formData,
+      birthDay: finalDay,
+      birthMonth: finalMonth,
+      birthYear: finalYear,
+      dateOfBirth: `${finalYear}-${String(finalMonth).padStart(2, '0')}-${String(finalDay).padStart(2, '0')}`,
+    };
+
     if (editingMember) {
-      updateMember(editingMember.id, formData);
+      updateMember(editingMember.id, payload);
       setEditingMember(null);
     } else {
-      addMember(formData);
+      addMember(payload);
     }
 
     setIsAddModalOpen(false);
@@ -514,50 +527,89 @@ export const MemberDirectoryModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Birthday fields */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Birth Day *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    required
-                    value={formData.birthDay}
-                    onChange={(e) =>
-                      setFormData({ ...formData, birthDay: parseInt(e.target.value) || 1 })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
-                  />
+              {/* Date of Birth Picker & Synchronized Fields */}
+              <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Date of Birth * (Calendar Picker or Manual)
+                  </label>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                    Syncs with Birthday Banner
+                  </span>
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Birth Month *</label>
-                  <select
-                    value={formData.birthMonth}
-                    onChange={(e) =>
-                      setFormData({ ...formData, birthMonth: parseInt(e.target.value) || 1 })
+                <input
+                  type="date"
+                  value={`${formData.birthYear || 1995}-${String(formData.birthMonth || 1).padStart(2, '0')}-${String(formData.birthDay || 1).padStart(2, '0')}`}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const [y, m, d] = e.target.value.split('-').map(Number);
+                      setFormData({
+                        ...formData,
+                        birthYear: y || 1995,
+                        birthMonth: m || 1,
+                        birthDay: d || 1,
+                      });
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
-                  >
-                    {MONTH_NAMES.map((name, idx) => (
-                      <option key={name} value={idx + 1}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Birth Year</label>
-                  <input
-                    type="number"
-                    min="1940"
-                    max="2020"
-                    value={formData.birthYear}
-                    onChange={(e) =>
-                      setFormData({ ...formData, birthYear: parseInt(e.target.value) || 1995 })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
-                  />
+                  }}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                />
+
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div>
+                    <label className="font-semibold text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                      Day
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      required
+                      value={formData.birthDay === 0 ? '' : formData.birthDay}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          birthDay: e.target.value === '' ? 0 : parseInt(e.target.value, 10),
+                        })
+                      }
+                      className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                      Month
+                    </label>
+                    <select
+                      value={formData.birthMonth}
+                      onChange={(e) =>
+                        setFormData({ ...formData, birthMonth: parseInt(e.target.value, 10) || 1 })
+                      }
+                      className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                    >
+                      {MONTH_NAMES.map((name, idx) => (
+                        <option key={name} value={idx + 1}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                      Year
+                    </label>
+                    <input
+                      type="number"
+                      min="1940"
+                      max="2025"
+                      value={formData.birthYear === 0 ? '' : formData.birthYear}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          birthYear: e.target.value === '' ? 0 : parseInt(e.target.value, 10),
+                        })
+                      }
+                      className="w-full px-2 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                    />
+                  </div>
                 </div>
               </div>
 

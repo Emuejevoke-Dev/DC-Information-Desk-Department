@@ -38,14 +38,20 @@ export const EventFlyerCarousel: React.FC<EventFlyerCarouselProps> = ({
   const [copiedShareId, setCopiedShareId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
-  const SLIDE_DURATION_MS = 7500;
+  // Moderately faster transition speed (4.5s instead of 7.5s)
+  const SLIDE_DURATION_MS = 4500;
   const progressStepIntervalMs = 50;
 
-  // Auto-advance with visual progress bar
+  // Auto-advance with smooth progress bar and reduced-motion respect
   useEffect(() => {
     if (publishedEvents.length <= 1) return;
 
-    if (isPaused) return;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (isPaused || prefersReducedMotion) return;
 
     const timer = setInterval(() => {
       setProgress((prev) => {

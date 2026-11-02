@@ -208,10 +208,10 @@ export const NewsEventsModule: React.FC = () => {
         {isAuthorized && (
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer glow-blue-hover"
           >
             <Plus className="w-4 h-4" />
-            Create Event / Notice
+            <span>+ Add New Event</span>
           </button>
         )}
       </div>

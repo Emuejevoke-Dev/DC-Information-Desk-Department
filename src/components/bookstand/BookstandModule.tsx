@@ -48,6 +48,7 @@ export const BookstandModule: React.FC = () => {
     stockMovements,
     addBook,
     updateBook,
+    deleteBook,
     recordBookSale,
     recordDebtPayment,
     addStockMovement,
@@ -58,6 +59,7 @@ export const BookstandModule: React.FC = () => {
 
   // Modals
   const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
   const [isAddDamagedModalOpen, setIsAddDamagedModalOpen] = useState(false);
@@ -85,6 +87,19 @@ export const BookstandModule: React.FC = () => {
     author: 'Dr. David Ogbueli',
     category: 'Spiritual Growth' as Book['category'],
     coverPhoto: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&auto=format&fit=crop&q=80',
+    costPrice: 2000,
+    sellingPrice: 3000,
+    openingStock: 25,
+    stockReceived: 0,
+    reorderThreshold: 10,
+  });
+
+  // Edit Book state
+  const [editBookFormData, setEditBookFormData] = useState({
+    title: '',
+    author: '',
+    category: 'Spiritual Growth' as Book['category'],
+    coverPhoto: '',
     costPrice: 2000,
     sellingPrice: 3000,
     openingStock: 25,
@@ -183,13 +198,77 @@ export const BookstandModule: React.FC = () => {
 
   const handleCreateBook = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookFormData.title || !bookFormData.sellingPrice) {
+    if (!bookFormData.title.trim() || !bookFormData.sellingPrice) {
       alert('Please fill out Book Title and Selling Price.');
       return;
     }
 
-    addBook(bookFormData);
+    addBook({
+      title: bookFormData.title.trim(),
+      author: bookFormData.author.trim() || 'Dr. David Ogbueli',
+      category: bookFormData.category,
+      coverPhoto: bookFormData.coverPhoto,
+      costPrice: Number(bookFormData.costPrice) || 0,
+      sellingPrice: Number(bookFormData.sellingPrice) || 0,
+      openingStock: Number(bookFormData.openingStock) || 0,
+      stockReceived: Number(bookFormData.stockReceived) || 0,
+      reorderThreshold: Number(bookFormData.reorderThreshold) || 10,
+    });
     setIsAddBookModalOpen(false);
+    setBookFormData({
+      title: '',
+      author: 'Dr. David Ogbueli',
+      category: 'Spiritual Growth',
+      coverPhoto: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&auto=format&fit=crop&q=80',
+      costPrice: 2000,
+      sellingPrice: 3000,
+      openingStock: 25,
+      stockReceived: 0,
+      reorderThreshold: 10,
+    });
+  };
+
+  const handleOpenEditBook = (b: Book) => {
+    setEditingBook(b);
+    setEditBookFormData({
+      title: b.title,
+      author: b.author,
+      category: b.category,
+      coverPhoto: b.coverPhoto || '',
+      costPrice: b.costPrice,
+      sellingPrice: b.sellingPrice,
+      openingStock: b.openingStock,
+      stockReceived: b.stockReceived,
+      reorderThreshold: b.reorderThreshold,
+    });
+  };
+
+  const handleUpdateBookSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBook) return;
+    if (!editBookFormData.title.trim() || !editBookFormData.sellingPrice) {
+      alert('Please fill out Book Title and Selling Price.');
+      return;
+    }
+
+    updateBook(editingBook.id, {
+      title: editBookFormData.title.trim(),
+      author: editBookFormData.author.trim(),
+      category: editBookFormData.category,
+      coverPhoto: editBookFormData.coverPhoto,
+      costPrice: Number(editBookFormData.costPrice) || 0,
+      sellingPrice: Number(editBookFormData.sellingPrice) || 0,
+      openingStock: Number(editBookFormData.openingStock) || 0,
+      stockReceived: Number(editBookFormData.stockReceived) || 0,
+      reorderThreshold: Number(editBookFormData.reorderThreshold) || 10,
+    });
+    setEditingBook(null);
+  };
+
+  const handleDeleteBook = (b: Book) => {
+    if (confirm(`Are you sure you want to permanently delete "${b.title}" from the bookstand inventory?`)) {
+      deleteBook(b.id);
+    }
   };
 
   const handleCreateSale = (e: React.FormEvent) => {
@@ -697,7 +776,7 @@ export const BookstandModule: React.FC = () => {
               </div>
 
               {canManageBookstand && (
-                <div className="p-4 pt-0">
+                <div className="p-4 pt-0 space-y-2">
                   <button
                     onClick={() => {
                       setSaleFormData({ ...saleFormData, bookId: b.id });
@@ -708,6 +787,22 @@ export const BookstandModule: React.FC = () => {
                   >
                     Sell Copy
                   </button>
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => handleOpenEditBook(b)}
+                      className="flex-1 py-1 text-[11px] font-bold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      Edit Title
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBook(b)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title={`Delete ${b.title}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1285,6 +1380,170 @@ export const BookstandModule: React.FC = () => {
                   className="px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 cursor-pointer shadow-xs"
                 >
                   Add Title to Catalogue
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Book Modal */}
+      {editingBook && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="text-base font-bold text-slate-900">Edit Book Information</h3>
+              <button
+                onClick={() => setEditingBook(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBookSubmit} className="mt-4 space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Book Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editBookFormData.title}
+                  onChange={(e) =>
+                    setEditBookFormData({ ...editBookFormData, title: e.target.value })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Author</label>
+                  <input
+                    type="text"
+                    value={editBookFormData.author}
+                    onChange={(e) =>
+                      setEditBookFormData({ ...editBookFormData, author: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Category</label>
+                  <select
+                    value={editBookFormData.category}
+                    onChange={(e) =>
+                      setEditBookFormData({
+                        ...editBookFormData,
+                        category: e.target.value as Book['category'],
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600"
+                  >
+                    <option value="Spiritual Growth">Spiritual Growth</option>
+                    <option value="Leadership">Leadership</option>
+                    <option value="Prayer & Fasting">Prayer & Fasting</option>
+                    <option value="Purpose & Destiny">Purpose & Destiny</option>
+                    <option value="Finance & Stewardship">Finance & Stewardship</option>
+                    <option value="Relationships">Relationships</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Selling Price (₦) *
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    required
+                    value={editBookFormData.sellingPrice === 0 ? '' : editBookFormData.sellingPrice}
+                    onChange={(e) =>
+                      setEditBookFormData({
+                        ...editBookFormData,
+                        sellingPrice: e.target.value === '' ? ('' as any) : Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Cost Price (₦)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editBookFormData.costPrice === 0 ? '' : editBookFormData.costPrice}
+                    onChange={(e) =>
+                      setEditBookFormData({
+                        ...editBookFormData,
+                        costPrice: e.target.value === '' ? ('' as any) : Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Opening Stock *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editBookFormData.openingStock === 0 ? '' : editBookFormData.openingStock}
+                    onChange={(e) =>
+                      setEditBookFormData({
+                        ...editBookFormData,
+                        openingStock: e.target.value === '' ? ('' as any) : Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Low Stock Reorder Alert Threshold
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editBookFormData.reorderThreshold}
+                    onChange={(e) =>
+                      setEditBookFormData({
+                        ...editBookFormData,
+                        reorderThreshold: e.target.value === '' ? ('' as any) : Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-purple-600"
+                  />
+                </div>
+              </div>
+
+              <ImageUploadInput
+                label="Book Cover Photo (Camera or Gallery)"
+                value={editBookFormData.coverPhoto}
+                onChange={(dataUrl) =>
+                  setEditBookFormData({ ...editBookFormData, coverPhoto: dataUrl })
+                }
+                aspectRatioHint="Portrait (3:4)"
+                placeholderText="Upload photo of book cover or select from gallery"
+              />
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingBook(null)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 cursor-pointer shadow-xs"
+                >
+                  Save Book Changes
                 </button>
               </div>
             </form>

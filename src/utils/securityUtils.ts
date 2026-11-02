@@ -15,12 +15,14 @@ export async function hashCredential(plainText: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export type SupportedOfficerRole = 'hod' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
+export type SupportedOfficerRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
 
 // Initial default hashes for operational officer credentials
 export const DEFAULT_OFFICER_HASHES: Record<SupportedOfficerRole, string> = {
   // Precomputed SHA-256 of "HOD-2026"
   hod: '7308faee793319808d4b29bb836e1b7db70d44005cbb6079dd824709d6fbb5f7',
+  // Precomputed SHA-256 of "OPS-2026" (Operations Officer)
+  operations: 'c7dad5bb1dca3dae2c5efcedf442cb4378168f6ff71beab83a6d9abc74b52d79',
   // Precomputed SHA-256 of "FIN-2026"
   finance: '50e18146779435fe1c93a0b3be895b28d0ee54e20b33b000845a7c5b6b8d4e9b',
   // Precomputed SHA-256 of "BOOK-2026"
@@ -110,6 +112,7 @@ export function setDemoPassword(newPassword: string, performedBy: string): { suc
 // Default Officer Role Assignments (Member IDs and user roles)
 export const DEFAULT_OFFICER_ASSIGNMENTS: Record<SupportedOfficerRole, string[]> = {
   hod: ['mem-1', 'usr-admin', 'admin.infodesk@dominioncityasaba.org', 'Brother Chukwudi Okonkwo'],
+  operations: ['mem-ops', 'usr-ops', 'ops.infodesk@dominioncityasaba.org', 'Sister Amaka Obi'],
   finance: ['mem-4', 'usr-finance', 'finance.infodesk@dominioncityasaba.org', 'Brother Emmanuel Nwachukwu'],
   uniform: ['mem-2', 'usr-leader', 'leader.infodesk@dominioncityasaba.org', 'Sister Ngozi Adeleke'],
   bookstand: ['mem-5', 'usr-bookstand', 'bookstand.infodesk@dominioncityasaba.org', 'Brother Kelechi Obi'],
@@ -156,15 +159,20 @@ export function isUserAuthorizedForRole(
   userEmail?: string,
   userName?: string
 ): boolean {
-  // HOD always has supervisory access to all roles
+  // HOD and Operations Officer both have supervisory oversight access to all departmental modules
   const assignments = getOfficerAssignments();
   const hodAssigned = assignments.hod || [];
-  const isHOD =
+  const opsAssigned = assignments.operations || [];
+
+  const isSupervisory =
     hodAssigned.includes(userId) ||
     (userEmail && hodAssigned.includes(userEmail.toLowerCase())) ||
-    (userName && hodAssigned.includes(userName));
+    (userName && hodAssigned.includes(userName)) ||
+    opsAssigned.includes(userId) ||
+    (userEmail && opsAssigned.includes(userEmail.toLowerCase())) ||
+    (userName && opsAssigned.includes(userName));
 
-  if (isHOD) return true;
+  if (isSupervisory) return true;
 
   // Specific role check
   const roleList = assignments[role] || [];

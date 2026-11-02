@@ -20,8 +20,8 @@ import {
   RememberedCredentials,
 } from '../utils/securityUtils';
 
-// The 5 official departmental operational roles (Department Member is NOT a separate operational role)
-export type OperationalRole = 'hod' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
+// The official departmental operational roles (Department Member is NOT a separate operational role)
+export type OperationalRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
 
 export interface NewMemberRegistration {
   fullName: string;
@@ -50,6 +50,15 @@ export const OPERATIONAL_ROLES_INFO: Record<OperationalRole, OperationalRoleDeta
     badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
     description: 'Executive supervisory oversight across all department areas: finance, book stand, uniforms, members, rosters, reports & attendance.',
     iconName: 'Crown',
+    workspaceTab: 'dashboard',
+  },
+  operations: {
+    id: 'operations',
+    title: 'Operations Officer',
+    badgeLabel: 'Operations Officer (Operational Deputy)',
+    badgeClass: 'bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+    description: 'Supervisory operational oversight across all department areas: reports, desks, bookstand, events, rosters, documentation & registers.',
+    iconName: 'ShieldCheck',
     workspaceTab: 'dashboard',
   },
   finance: {
@@ -130,6 +139,9 @@ interface AuthContextType {
   officerAssignments: Record<OperationalRole, string[]>;
   saveAssignments: (assignments: Record<OperationalRole, string[]>) => void;
 
+  // Session Login Timestamp (Accurate Nigerian WAT Time)
+  loginTimestamp: string | null;
+
   // Granular Permission Checks
   canViewFinances: boolean;
   canManageFinances: boolean;
@@ -146,6 +158,7 @@ interface AuthContextType {
   canViewConfidentialData: boolean;
   canSuperviseAll: boolean;
   isHOD: boolean;
+  isOperations: boolean;
   isFinance: boolean;
   isUniform: boolean;
   isBookstand: boolean;
@@ -159,8 +172,17 @@ const AUTH_STORAGE_KEY = 'dc_asaba_auth_user_v2';
 const AUTH_TOKEN_KEY = 'dc_asaba_auth_session_active';
 const OPERATIONAL_ROLE_KEY = 'dc_asaba_active_op_role_v3';
 const USERS_STORAGE_KEY = 'dc_asaba_users_v2';
+const LOGIN_TIME_STORAGE_KEY = 'dc_asaba_login_timestamp_v2';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Session login timestamp: stored at the actual login event and preserved across page refreshes
+  const [loginTimestamp, setLoginTimestamp] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(LOGIN_TIME_STORAGE_KEY) || localStorage.getItem(LOGIN_TIME_STORAGE_KEY) || null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [allUsers, setAllUsers] = useState<User[]>(() => {
     try {
       const saved = localStorage.getItem(USERS_STORAGE_KEY);
@@ -422,9 +444,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(user);
       setIsAuthenticated(true);
       setActiveOperationalRole(null);
+
+      // Record exact login timestamp on actual login event (UTC ISO string)
+      const currentLoginTime = new Date().toISOString();
+      setLoginTimestamp(currentLoginTime);
       try {
         localStorage.setItem(AUTH_TOKEN_KEY, 'true');
         localStorage.removeItem(OPERATIONAL_ROLE_KEY);
+        sessionStorage.setItem(LOGIN_TIME_STORAGE_KEY, currentLoginTime);
+        localStorage.setItem(LOGIN_TIME_STORAGE_KEY, currentLoginTime);
       } catch (e) {
         console.warn('Storage warning', e);
       }
@@ -534,9 +562,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsAuthenticated(false);
     setActiveOperationalRole(null);
+    setLoginTimestamp(null);
     try {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(OPERATIONAL_ROLE_KEY);
+      sessionStorage.removeItem(LOGIN_TIME_STORAGE_KEY);
+      localStorage.removeItem(LOGIN_TIME_STORAGE_KEY);
     } catch (e) {
       console.error('Failed to clear session', e);
     }
@@ -591,6 +622,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const message =
         role === 'hod'
           ? 'Access Granted — Welcome to the Department Leader (HOD) Dashboard.'
+          : role === 'operations'
+          ? 'Access Granted — Welcome to the Operations Officer Management Workspace.'
           : `Access Granted — Welcome to the ${roleTitle} Workspace.`;
 
       logSecurityEvent({
@@ -649,26 +682,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Granular Permission Computations
   const isOperationalRoleActive = activeOperationalRole !== null;
   const isHOD = activeOperationalRole === 'hod';
+  const isOperations = activeOperationalRole === 'operations';
   const isFinance = activeOperationalRole === 'finance';
   const isBookstand = activeOperationalRole === 'bookstand';
   const isUniform = activeOperationalRole === 'uniform';
   const isSecretary = activeOperationalRole === 'secretary';
 
-  // HOD has supervisory access across all department areas
-  const canSuperviseAll = isHOD;
-  const canViewFinances = isHOD || isFinance;
-  const canManageFinances = isHOD || isFinance;
-  const canViewBookstand = isHOD || isBookstand;
-  const canManageBookstand = isHOD || isBookstand;
-  const canManageUniforms = isHOD || isUniform;
-  const canManageMembers = isHOD || isSecretary;
-  const canManageAttendance = isHOD || isSecretary;
-  const canManageReports = isHOD || isSecretary;
-  const canManageHandbook = isHOD || isSecretary;
-  const canManageEvents = isHOD || isSecretary;
-  const canManageForms = isHOD || isSecretary;
-  const canManageRosters = isHOD || isSecretary;
-  const canViewConfidentialData = isHOD || isSecretary || isFinance;
+  // HOD and Operations Officer both have comprehensive supervisory oversight across all department areas
+  const canSuperviseAll = isHOD || isOperations;
+  const canViewFinances = isHOD || isOperations || isFinance;
+  const canManageFinances = isHOD || isOperations || isFinance;
+  const canViewBookstand = isHOD || isOperations || isBookstand;
+  const canManageBookstand = isHOD || isOperations || isBookstand;
+  const canManageUniforms = isHOD || isOperations || isUniform;
+  const canManageMembers = isHOD || isOperations || isSecretary;
+  const canManageAttendance = isHOD || isOperations || isSecretary;
+  const canManageReports = isHOD || isOperations || isSecretary;
+  const canManageHandbook = isHOD || isOperations || isSecretary;
+  const canManageEvents = isHOD || isOperations || isSecretary;
+  const canManageForms = isHOD || isOperations || isSecretary;
+  const canManageRosters = isHOD || isOperations || isSecretary;
+  const canViewConfidentialData = isHOD || isOperations || isSecretary || isFinance;
   const isVisitor = !isAuthenticated;
 
   return (
@@ -693,6 +727,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateOfficerPassword,
         officerAssignments,
         saveAssignments,
+        loginTimestamp,
         canViewFinances,
         canManageFinances,
         canViewBookstand,
@@ -708,6 +743,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         canViewConfidentialData,
         canSuperviseAll,
         isHOD,
+        isOperations,
         isFinance,
         isUniform,
         isBookstand,

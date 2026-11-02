@@ -160,3 +160,72 @@ export const MONTH_NAMES = [
   'November',
   'December',
 ];
+
+/**
+ * Formats date and time in Nigerian Timezone (Africa/Lagos, WAT, UTC+1)
+ * Safely parses ISO UTC timestamps and renders standard 12-hour formatted time with WAT indicator.
+ */
+export function formatLagosDateTime(dateStringOrDate: string | Date | null | undefined): string {
+  if (!dateStringOrDate) return 'N/A';
+  const d = typeof dateStringOrDate === 'string' ? new Date(dateStringOrDate) : dateStringOrDate;
+  if (isNaN(d.getTime())) return String(dateStringOrDate);
+  try {
+    return (
+      d.toLocaleString('en-GB', {
+        timeZone: 'Africa/Lagos',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }) + ' WAT'
+    );
+  } catch (e) {
+    return d.toLocaleString('en-GB') + ' WAT';
+  }
+}
+
+/**
+ * Formats time only in Nigerian Timezone (Africa/Lagos, WAT, UTC+1)
+ */
+export function formatLagosTime(dateStringOrDate: string | Date | null | undefined): string {
+  if (!dateStringOrDate) return 'N/A';
+  const d = typeof dateStringOrDate === 'string' ? new Date(dateStringOrDate) : dateStringOrDate;
+  if (isNaN(d.getTime())) return String(dateStringOrDate);
+  try {
+    return (
+      d.toLocaleTimeString('en-GB', {
+        timeZone: 'Africa/Lagos',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }) + ' WAT'
+    );
+  } catch (e) {
+    return d.toLocaleTimeString('en-GB') + ' WAT';
+  }
+}
+
+/**
+ * Formats date only in Nigerian Timezone (Africa/Lagos)
+ */
+export function formatLagosDate(dateStringOrDate: string | Date | null | undefined): string {
+  if (!dateStringOrDate) return 'N/A';
+  const d = typeof dateStringOrDate === 'string' ? new Date(dateStringOrDate) : dateStringOrDate;
+  if (isNaN(d.getTime())) return String(dateStringOrDate);
+  try {
+    return d.toLocaleDateString('en-GB', {
+      timeZone: 'Africa/Lagos',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch (e) {
+    return d.toLocaleDateString('en-GB');
+  }
+}
+
