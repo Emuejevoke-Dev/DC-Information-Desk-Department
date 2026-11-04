@@ -488,12 +488,12 @@ export interface BookstandComplaint {
   submittedByPhone?: string;
   submittedAt: string;
   category:
-    | 'Transaction Error'
-    | 'Missing Item'
-    | 'Quantity Discrepancy'
-    | 'Handover Issue'
-    | 'Operational Problem'
-    | 'Observation';
+  | 'Transaction Error'
+  | 'Missing Item'
+  | 'Quantity Discrepancy'
+  | 'Handover Issue'
+  | 'Operational Problem'
+  | 'Observation';
   subject: string;
   description: string;
   photoUrl?: string;
@@ -511,12 +511,12 @@ export interface BookstandExpense {
   date: string; // YYYY-MM-DD
   month: string; // e.g. "2026-11"
   category:
-    | 'Restock Transport & Logistics'
-    | 'Packing Bags & Envelopes'
-    | 'Book Display & Stand Repairs'
-    | 'Bank & POS Terminal Charges'
-    | 'Desk Petty Cash & Refreshment'
-    | 'Miscellaneous Publishing Expense';
+  | 'Restock Transport & Logistics'
+  | 'Packing Bags & Envelopes'
+  | 'Book Display & Stand Repairs'
+  | 'Bank & POS Terminal Charges'
+  | 'Desk Petty Cash & Refreshment'
+  | 'Miscellaneous Publishing Expense';
   description: string;
   amount: number;
   receiptRef?: string;
