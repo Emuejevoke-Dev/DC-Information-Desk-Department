@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { ImageUploadInput } from '../common/ImageUploadInput';
-import { User, Phone, MapPin, Briefcase, Calendar, Check, X } from 'lucide-react';
+import { User, Phone, MapPin, Briefcase, Calendar, Check, X, LogOut, ShieldCheck } from 'lucide-react';
 
 interface MyProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenRoleModal?: () => void;
 }
 
 export const MyProfileModal: React.FC<MyProfileModalProps> = ({
   isOpen,
   onClose,
+  onOpenRoleModal,
 }) => {
-  const { currentUser, setCurrentUser } = useAuth();
+  const { currentUser, setCurrentUser, logout, activeOperationalRole, isOperationalRoleActive } = useAuth();
   const { members, updateMember, addMember } = useData();
 
   // Find member record strictly corresponding to currentUser
@@ -223,6 +225,43 @@ export const MyProfileModal: React.FC<MyProfileModalProps> = ({
                 className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#131F38] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
               />
             </div>
+          </div>
+
+          {/* Mobile-Friendly Account Actions: Operational Role & Immediate Logout */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Department & Account Actions
+            </p>
+            {onOpenRoleModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenRoleModal();
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-xs font-bold text-blue-900 dark:text-blue-200 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>Switch Operational Role</span>
+                </span>
+                <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black uppercase">
+                  {isOperationalRoleActive && activeOperationalRole ? activeOperationalRole.toUpperCase() : 'ROLES'}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                logout();
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out of Account</span>
+            </button>
           </div>
 
           {saveSuccess && (

@@ -113,7 +113,7 @@ export const EventFlyerCarousel: React.FC<EventFlyerCarouselProps> = ({
       {/* Flagship Carousel Container commanding 42-48% viewport height */}
       <section
         aria-label="Upcoming Church Events Showcase"
-        className="relative overflow-hidden rounded-3xl bg-[#051126] shadow-xl group card-shimmer-border glow-blue"
+        className="relative overflow-hidden rounded-3xl bg-[#051126] shadow-xl group border border-blue-900/60 glow-blue"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >

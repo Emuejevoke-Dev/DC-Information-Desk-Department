@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { DressCode, DressCodeStatus } from '../../types/models';
+import { DressCode, DressCodeStatus, DepartmentMonthlyReport } from '../../types/models';
 import { formatDate, getNextSunday } from '../../utils/dateUtils';
 import {
   generateOutfitPlanForSundays,
@@ -32,23 +32,124 @@ import {
   Printer,
   ChevronRight,
   Filter,
+  FileText,
 } from 'lucide-react';
 
 interface UniformLeaderDashboardProps {
   onReturnToGeneral?: () => void;
   onNavigateToRoster?: () => void;
+  onOpenReportToHRD?: () => void;
 }
 
 export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
   onReturnToGeneral,
   onNavigateToRoster,
+  onOpenReportToHRD,
 }) => {
   const { currentUser, canManageUniforms, isHOD } = useAuth();
-  const { dressCodes, addDressCode, updateDressCode, deleteDressCode, publishDressCode, archiveDressCode } = useData();
+  const {
+    dressCodes,
+    addDressCode,
+    updateDressCode,
+    deleteDressCode,
+    publishDressCode,
+    archiveDressCode,
+    monthlyReports,
+    saveMonthlyReport,
+  } = useData();
 
   // Active view filters
   const [filterStatus, setFilterStatus] = useState<'All' | DressCodeStatus>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'planner' | 'monthly-report'>('planner');
+
+  // Monthly Report State
+  const [selectedReportMonth, setSelectedReportMonth] = useState('2026-10');
+  const [reportActivities, setReportActivities] = useState('');
+  const [reportWorkCompleted, setReportWorkCompleted] = useState('');
+  const [reportChallenges, setReportChallenges] = useState('');
+  const [reportComplaints, setReportComplaints] = useState('');
+  const [reportRecommendations, setReportRecommendations] = useState('');
+  const [reportOutstanding, setReportOutstanding] = useState('');
+  const [reportNextMonth, setReportNextMonth] = useState('');
+  const [reportSavedBanner, setReportSavedBanner] = useState<string | null>(null);
+
+  const currentUniformReport = useMemo(() => {
+    return monthlyReports.find(
+      (r) => r.departmentUnit === 'Uniform' && r.reportingMonth === selectedReportMonth
+    );
+  }, [monthlyReports, selectedReportMonth]);
+
+  React.useEffect(() => {
+    if (currentUniformReport) {
+      setReportActivities(currentUniformReport.activitiesCarriedOut || '');
+      setReportWorkCompleted(currentUniformReport.workCompleted || '');
+      setReportChallenges(currentUniformReport.challengesEncountered || '');
+      setReportComplaints(currentUniformReport.complaintsOrIssues || '');
+      setReportRecommendations(currentUniformReport.recommendations || '');
+      setReportOutstanding(currentUniformReport.outstandingResponsibilities || '');
+      setReportNextMonth(currentUniformReport.activitiesPlannedNextMonth || '');
+    } else {
+      setReportActivities(
+        'Designed and published weekly dress codes for all Sunday services. Inspected ushering and desk team attire adherence and assisted members with styling inquiries.'
+      );
+      setReportWorkCompleted(
+        'Generated full month outfit schedules matching corporate church themes. Ensured all duty officers wore departmental lapel pins and maintained modesty standards.'
+      );
+      setReportChallenges(
+        'Occasional footwear non-compliance (slippers or loud casual sneakers) and missing departmental lapel pins during morning setup.'
+      );
+      setReportComplaints(
+        'Some members requested longer notice periods before special color combination services.'
+      );
+      setReportRecommendations(
+        'Publish dress codes at least two weeks in advance and maintain a reserve of 15 extra departmental lapel pins at the Information Desk.'
+      );
+      setReportOutstanding(
+        'Procurement of 50 new Dominion City departmental lapel pins for incoming inductees.'
+      );
+      setReportNextMonth(
+        'Organize Thanksgiving Sunday royal purple & gold corporate styling and distribute updated grooming guidelines.'
+      );
+    }
+  }, [currentUniformReport, selectedReportMonth]);
+
+  const handleSaveMonthlyReport = (submit: boolean = false) => {
+    const reportPayload: Omit<DepartmentMonthlyReport, 'id' | 'createdAt' | 'updatedAt'> = {
+      departmentUnit: 'Uniform',
+      reportingMonth: selectedReportMonth,
+      submittedBy: currentUser?.name || 'Uniform Coordinator',
+      submittedByRole: 'Uniform & Dress Code Leader',
+      submissionDate: new Date().toISOString().split('T')[0],
+      status: submit ? 'Submitted' : 'Draft',
+      activitiesCarriedOut: reportActivities,
+      workCompleted: reportWorkCompleted,
+      importantStatistics: {
+        'Sunday Schedules Published': dressCodes.length,
+        'Active Monthly Plans': dressCodes.filter((d) => d.status === 'Published').length,
+        'Corporate Themes Managed': 4,
+        'Dress Code Adherence Rate': '94%',
+        'Lapel Pins Issued': 12,
+      },
+      challengesEncountered: reportChallenges,
+      complaintsOrIssues: reportComplaints,
+      recommendations: reportRecommendations,
+      outstandingResponsibilities: reportOutstanding,
+      activitiesPlannedNextMonth: reportNextMonth,
+    };
+
+    saveMonthlyReport({
+      ...(currentUniformReport?.id ? { id: currentUniformReport.id } : {}),
+      ...reportPayload,
+    });
+
+    setReportSavedBanner(
+      submit
+        ? `✓ Uniform Monthly Report for ${selectedReportMonth} submitted successfully to the HOD!`
+        : `✓ Uniform Monthly Report for ${selectedReportMonth} saved as Draft!`
+    );
+    setTimeout(() => setReportSavedBanner(null), 4000);
+  };
 
   // Modals
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -296,7 +397,7 @@ export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Workspace Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#0E1E38] via-[#122A5E] to-[#1E3A8A] text-white p-5 sm:p-6 rounded-2xl shadow-lg card-shimmer-border glow-blue">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#0E1E38] via-[#122A5E] to-[#1E3A8A] text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-blue-500/40 glow-blue">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="p-1.5 rounded-lg bg-rose-500/30 text-rose-300 border border-rose-400/30 glow-dot-blue">
@@ -335,6 +436,17 @@ export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
             <span>Generate New Outfit Plan</span>
           </button>
 
+          {onOpenReportToHRD && (
+            <button
+              onClick={onOpenReportToHRD}
+              className="btn-compact bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black shadow-md border border-amber-300"
+              title="Escalate uniform or grooming issues to HRD"
+            >
+              <Send className="w-3.5 h-3.5 text-slate-950" />
+              <span>REPORT TO HRD</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenCreateModal}
             className="btn-compact btn-glow-pink"
@@ -367,6 +479,35 @@ export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
         </div>
       )}
 
+      {/* Main View Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <button
+          onClick={() => setActiveTab('planner')}
+          className={`pb-3 px-4 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'planner'
+              ? 'text-rose-600 dark:text-rose-400 border-b-2 border-rose-600 dark:border-rose-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Shirt className="w-4 h-4" />
+          <span>Sunday Dress Codes & Outfit Planner ({dressCodes.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('monthly-report')}
+          className={`pb-3 px-4 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'monthly-report'
+              ? 'text-rose-600 dark:text-rose-400 border-b-2 border-rose-600 dark:border-rose-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Monthly Unit Report</span>
+        </button>
+      </div>
+
+      {/* PLANNER TAB */}
+      {activeTab === 'planner' && (
+        <div className="space-y-6">
       {/* 2. Key Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
@@ -710,6 +851,224 @@ export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
           })
         )}
       </div>
+      </div>
+      )}
+
+      {/* MONTHLY REPORT TAB */}
+      {activeTab === 'monthly-report' && (
+        <div className="space-y-5 animate-in fade-in duration-150">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-4 h-4 text-rose-600" />
+                Uniform & Dress Code Monthly Operating Report
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Official 9-part monthly styling and dress code coordination report submitted to the Head of Department (HOD).
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-400">Reporting Month:</label>
+              <select
+                value={selectedReportMonth}
+                onChange={(e) => setSelectedReportMonth(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+              >
+                <option value="2026-11">November 2026</option>
+                <option value="2026-10">October 2026</option>
+                <option value="2026-09">September 2026</option>
+              </select>
+            </div>
+          </div>
+
+          {reportSavedBanner && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+              {reportSavedBanner}
+            </div>
+          )}
+
+          {currentUniformReport && (
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Submission Status:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md font-bold uppercase text-[10px] ${
+                    currentUniformReport.status === 'Submitted'
+                      ? 'bg-blue-500 text-white'
+                      : currentUniformReport.status === 'Reviewed'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-amber-500 text-slate-950'
+                  }`}
+                >
+                  {currentUniformReport.status}
+                </span>
+                {currentUniformReport.reviewedBy && (
+                  <span className="text-slate-400">
+                    • Reviewed by <strong className="text-white">{currentUniformReport.reviewedBy}</strong>
+                  </span>
+                )}
+              </div>
+              {currentUniformReport.hodReviewNotes && (
+                <div className="text-amber-200 italic text-[11px] bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                  HOD Remark: "{currentUniformReport.hodReviewNotes}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Unit Statistics Summary Card */}
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-900 dark:text-rose-300 block">
+              3. Important Unit Statistics (Auto-Calculated for {selectedReportMonth})
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/40">
+                <span className="text-[10px] text-slate-400 block">Schedules Published</span>
+                <strong className="text-slate-900 dark:text-white font-black">{dressCodes.length} Sundays</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/40">
+                <span className="text-[10px] text-slate-400 block">Active Live Plans</span>
+                <strong className="text-slate-900 dark:text-white font-black">{dressCodes.filter((d) => d.status === 'Published').length} Schedules</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/40">
+                <span className="text-[10px] text-slate-400 block">Grooming & Pin Adherence</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-black">94% Compliance</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/40">
+                <span className="text-[10px] text-slate-400 block">Lapel Pins Issued</span>
+                <strong className="text-slate-900 dark:text-white font-black">12 Pins</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* 9-Part Narrative Form */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  1. Major Activities Carried Out *
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportActivities}
+                  onChange={(e) => setReportActivities(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Dress code planning, weekly coordination, styling advisories..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  2. Work Completed & Milestones *
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportWorkCompleted}
+                  onChange={(e) => setReportWorkCompleted(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Outfit guides published, lapel pin verification, inspection records..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  4. Operational Challenges Encountered
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportChallenges}
+                  onChange={(e) => setReportChallenges(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Non-compliant footwear, late arrival dress corrections..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  5. Complaints, Observations & Issues
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportComplaints}
+                  onChange={(e) => setReportComplaints(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Inquiries on color combinations, requests for fabric recommendations..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  6. Strategic Recommendations
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportRecommendations}
+                  onChange={(e) => setReportRecommendations(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Procuring additional lapel pin inventory, publishing visual lookbooks..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  7. Outstanding Responsibilities & Follow-Up
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportOutstanding}
+                  onChange={(e) => setReportOutstanding(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Replacing damaged pins, finalizing special anniversary styles..."
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  8. Activities Planned for Next Month
+                </label>
+                <textarea
+                  rows={2}
+                  value={reportNextMonth}
+                  onChange={(e) => setReportNextMonth(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Monthly styling palette, department photo session uniform planning..."
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[11px] text-slate-500">
+                Reporting Officer: <strong>{currentUser?.name || 'Uniform Coordinator'}</strong> • Date: {new Date().toISOString().split('T')[0]}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn-compact bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold h-9 px-3 text-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Report</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveMonthlyReport(false)}
+                  className="btn-compact bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-900 dark:text-white font-bold h-9 px-3.5 text-xs cursor-pointer"
+                >
+                  Save Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveMonthlyReport(true)}
+                  className="btn-compact bg-rose-600 hover:bg-rose-500 text-white font-bold h-9 px-4 text-xs cursor-pointer flex items-center gap-1.5 shadow-md"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Submit Report to HOD</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 5. MODAL: Create / Edit Dress Code */}
       {isEditorOpen && (

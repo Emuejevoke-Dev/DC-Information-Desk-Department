@@ -18,10 +18,11 @@ import {
   saveMemberPassword,
   getMemberPassword,
   RememberedCredentials,
+  checkRateLimit,
 } from '../utils/securityUtils';
 
 // The official departmental operational roles (Department Member is NOT a separate operational role)
-export type OperationalRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
+export type OperationalRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary' | 'welfare';
 
 export interface NewMemberRegistration {
   fullName: string;
@@ -45,12 +46,12 @@ export interface OperationalRoleDetails {
 export const OPERATIONAL_ROLES_INFO: Record<OperationalRole, OperationalRoleDetails> = {
   hod: {
     id: 'hod',
-    title: 'Department Leader (HOD)',
-    badgeLabel: 'Department Leader / HOD',
+    title: 'Head of Department (HRD)',
+    badgeLabel: 'HRD / Head of Department',
     badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-    description: 'Executive supervisory oversight across all department areas: finance, book stand, uniforms, members, rosters, reports & attendance.',
+    description: 'Executive supervisory oversight across all department areas: exclusive HRD Office, complaints, escalations, monthly reports, assemblies and messages.',
     iconName: 'Crown',
-    workspaceTab: 'dashboard',
+    workspaceTab: 'hrd-office',
   },
   operations: {
     id: 'operations',
@@ -81,8 +82,8 @@ export const OPERATIONAL_ROLES_INFO: Record<OperationalRole, OperationalRoleDeta
   },
   bookstand: {
     id: 'bookstand',
-    title: 'Book Stand',
-    badgeLabel: 'Book Stand Desk',
+    title: 'Bookstand Officer',
+    badgeLabel: 'Book Officer Desk',
     badgeClass: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
     description: 'Manages book catalogue, sales transactions, stock deliveries, damaged books and debtor balances.',
     iconName: 'ShoppingBag',
@@ -96,6 +97,15 @@ export const OPERATIONAL_ROLES_INFO: Record<OperationalRole, OperationalRoleDeta
     description: 'Departmental documentation, service attendance registers, service reports, minutes and meeting rosters.',
     iconName: 'ClipboardList',
     workspaceTab: 'secretary-workspace',
+  },
+  welfare: {
+    id: 'welfare',
+    title: 'Welfare Coordinator',
+    badgeLabel: 'Welfare Desk',
+    badgeClass: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950/60 dark:text-pink-300 dark:border-pink-800',
+    description: 'Member care, absentee follow-up via Call/WhatsApp, visitation scheduling, welfare support cases and monthly welfare reports.',
+    iconName: 'HeartHandshake',
+    workspaceTab: 'welfare-workspace',
   },
 };
 
@@ -155,14 +165,18 @@ interface AuthContextType {
   canManageEvents: boolean;
   canManageForms: boolean;
   canManageRosters: boolean;
+  canManageWelfare: boolean;
   canViewConfidentialData: boolean;
   canSuperviseAll: boolean;
+  canAccessHRDOffice: boolean;
   isHOD: boolean;
+  isHRD: boolean;
   isOperations: boolean;
   isFinance: boolean;
   isUniform: boolean;
   isBookstand: boolean;
   isSecretary: boolean;
+  isWelfare: boolean;
   isVisitor: boolean;
 }
 
@@ -581,35 +595,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const roleInfo = OPERATIONAL_ROLES_INFO[role];
     const roleTitle = roleInfo?.title || role.toUpperCase();
 
-    // 1. Role Authorization Verification (Production & Demo Security Safeguard)
-    // A user must not gain privileges simply by selecting a role and entering a password.
-    // Verify that the user is authorized for the role or is the HOD.
-    const isAuthorized = isUserAuthorizedForRole(role, currentUser.id, currentUser.email, currentUser.name);
-
-    // If in demo mode and user is not explicitly assigned, in demo development we permit testing
-    // if credential verifies, but we log the check and if in production mode we strictly block.
-    if (!isDemoMode && !isAuthorized) {
-      logSecurityEvent({
-        userId: currentUser.id,
-        userName: currentUser.name,
-        action: `Unauthorized Role Switch Attempt: ${role.toUpperCase()}`,
-        category: 'role_switch',
-        details: `Access denied. ${currentUser.name} is not assigned as ${roleTitle}.`,
-        status: 'DENIED',
-      });
-      return {
-        success: false,
-        message: `Access Denied — You are not assigned to the ${roleTitle} role. Officer access must be granted by the Department Leader (HOD).`,
-      };
-    }
-
-    // 2. Credential Verification (Demo Password in Demo Mode, or Individual Officer Password)
+    // 1. Credential Verification (Demo Password in Demo Mode, or Individual Officer Password)
     if (!credential || !credential.trim()) {
       return {
         success: false,
         message: isDemoMode
           ? 'Please enter the temporary departmental demo password to access this dashboard.'
           : 'Please enter your authorized individual officer password.',
+      };
+    }
+
+    // Rate limiting defense against brute-force verification
+    const rateLimit = checkRateLimit(`role_switch_${currentUser.id}_${role}`, 5, 60000);
+    if (!rateLimit.isAllowed) {
+      logSecurityEvent({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        action: `Rate Limit Exceeded for Role Switch: ${role.toUpperCase()}`,
+        category: 'role_switch',
+        details: `Too many password attempts. Cooldown period: ${rateLimit.retryAfterSeconds}s.`,
+        status: 'DENIED',
+      });
+      return {
+        success: false,
+        message: `Too many unsuccessful verification attempts. Please wait ${rateLimit.retryAfterSeconds} seconds before trying again.`,
       };
     }
 
@@ -687,21 +696,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isBookstand = activeOperationalRole === 'bookstand';
   const isUniform = activeOperationalRole === 'uniform';
   const isSecretary = activeOperationalRole === 'secretary';
+  const isWelfare = activeOperationalRole === 'welfare';
 
   // HOD and Operations Officer both have comprehensive supervisory oversight across all department areas
   const canSuperviseAll = isHOD || isOperations;
+  // EXCLUSIVE SECURITY RULE: Only the authenticated HRD can access the HRD Office. Operations Manager is explicitly DENIED.
+  const canAccessHRDOffice = isHOD;
+  const isHRD = isHOD;
   const canViewFinances = isHOD || isOperations || isFinance;
   const canManageFinances = isHOD || isOperations || isFinance;
-  const canViewBookstand = isHOD || isOperations || isBookstand;
-  const canManageBookstand = isHOD || isOperations || isBookstand;
+  const canViewBookstand = true; // All authenticated members can view the bookstand catalogue
+  const canManageBookstand = isHOD || isOperations || isBookstand; // Direct desk actions and uploads strictly restricted to authenticated bookstand officers
   const canManageUniforms = isHOD || isOperations || isUniform;
   const canManageMembers = isHOD || isOperations || isSecretary;
-  const canManageAttendance = isHOD || isOperations || isSecretary;
+  const canManageAttendance = isHOD || isOperations || isSecretary || isWelfare;
   const canManageReports = isHOD || isOperations || isSecretary;
   const canManageHandbook = isHOD || isOperations || isSecretary;
   const canManageEvents = isHOD || isOperations || isSecretary;
   const canManageForms = isHOD || isOperations || isSecretary;
   const canManageRosters = isHOD || isOperations || isSecretary;
+  const canManageWelfare = isHOD || isOperations || isWelfare;
   const canViewConfidentialData = isHOD || isOperations || isSecretary || isFinance;
   const isVisitor = !isAuthenticated;
 
@@ -740,14 +754,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         canManageEvents,
         canManageForms,
         canManageRosters,
+        canManageWelfare,
         canViewConfidentialData,
         canSuperviseAll,
+        canAccessHRDOffice,
         isHOD,
+        isHRD,
         isOperations,
         isFinance,
         isUniform,
         isBookstand,
         isSecretary,
+        isWelfare,
         isVisitor,
       }}
     >

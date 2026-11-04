@@ -23,6 +23,58 @@
     color: #F1F5F9;
   }
 
+  /* Universal input, textarea and select readability and caret visibility */
+  input, textarea, select {
+    color: #0f172a;
+    caret-color: #2563eb;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8;
+    opacity: 0.85;
+  }
+
+  /* When in light mode, guarantee dark slate readable text on standard light inputs */
+  :root:not(.dark) input:not([class*="text-white"]):not(.text-white),
+  :root:not(.dark) textarea:not([class*="text-white"]):not(.text-white),
+  :root:not(.dark) select:not([class*="text-white"]):not(.text-white) {
+    color: #0f172a !important;
+    caret-color: #2563eb !important;
+  }
+
+  /* When explicitly styled with text-white or white text utility */
+  input[class*="text-white"],
+  textarea[class*="text-white"],
+  select[class*="text-white"] {
+    color: #ffffff !important;
+  }
+
+  /* In dark mode, guarantee crisp white/bright text and visible caret */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    color: #f8fafc !important;
+    caret-color: #60a5fa !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748b;
+    opacity: 0.85;
+  }
+
+  /* High-contrast styling for Lost & Found inputs */
+  .lost-found-input {
+    color: #0f172a !important;
+    caret-color: #d97706 !important;
+  }
+
+  .dark .lost-found-input {
+    color: #ffffff !important;
+    caret-color: #fbbf24 !important;
+  }
+
   #root {
     min-height: 100vh;
     width: 100%;
@@ -184,8 +236,21 @@
   animation: border-shimmer 8s ease infinite;
 }
 
+/* Dark Hero Banners that must retain their dark rich navy background in both Sun and Dark modes */
+.card-shimmer-border-dark,
+.card-dark-hero.card-shimmer-border,
+.card-shimmer-border.card-dark-hero {
+  background-image: linear-gradient(#0A1A3B, #0A1A3B), linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6) !important;
+}
+.dark .card-shimmer-border-dark,
+.dark .card-dark-hero.card-shimmer-border,
+.dark .card-shimmer-border.card-dark-hero {
+  background-image: linear-gradient(#08142F, #08142F), linear-gradient(90deg, #3b82f6, #a855f7, #ec4899, #60a5fa) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .card-shimmer-border {
+  .card-shimmer-border,
+  .card-shimmer-border-dark {
     animation: none;
   }
 }

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { Book, BookSale, StockMovement } from '../../types/models';
+import { Book, BookSale, StockMovement, BookstandActivityEntry, BookstandComplaint, BookstandComplaintStatus } from '../../types/models';
 import { PrintModal } from '../common/PrintModal';
 import { exportToCSV } from '../../utils/exportUtils';
 import { formatNaira } from '../../utils/formatters';
@@ -29,23 +29,46 @@ import {
   FileText,
   CheckCircle,
   Clock,
+  MessageSquare,
+  Send,
+  UserCheck,
+  Camera,
 } from 'lucide-react';
 
 export type BookstandTab =
   | 'overview'
   | 'inventory'
   | 'sales'
+  | 'activities'
+  | 'complaints'
   | 'damaged'
   | 'missing'
   | 'debts'
   | 'reports';
 
-export const BookstandModule: React.FC = () => {
+export interface BookstandModuleProps {
+  onOpenRoleModal?: () => void;
+  onNavigateToOfficerDesk?: () => void;
+}
+
+export const BookstandModule: React.FC<BookstandModuleProps> = ({
+  onOpenRoleModal,
+  onNavigateToOfficerDesk,
+}) => {
   const { canViewBookstand, canManageBookstand, currentUser } = useAuth();
   const {
     books,
     sales,
     stockMovements,
+    bookstandDutySessions,
+    startBookstandDutySession,
+    endBookstandDutySession,
+    bookstandActivities,
+    addBookstandActivity,
+    bookstandComplaints,
+    addBookstandComplaint,
+    updateBookstandComplaintStatus,
+    addBookstandComplaintComment,
     addBook,
     updateBook,
     deleteBook,
@@ -56,6 +79,58 @@ export const BookstandModule: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<BookstandTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Service Date and Officiating Personnel for the day
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const dayOfWeek = today.getDay(); // 0 is Sunday, 2 is Tuesday
+  const defaultServiceType =
+    dayOfWeek === 2
+      ? 'Tuesday Word & Communion'
+      : dayOfWeek === 0
+      ? 'Sunday 1st Service'
+      : 'Sunday Service';
+
+  const [serviceDate] = useState<string>(todayStr);
+  const [serviceType] = useState<string>(defaultServiceType);
+  const [officiatingMember] = useState<string>(currentUser?.name || 'Department Officer');
+
+  // Duty Session State
+  const activeDutySession = useMemo(() => {
+    return (
+      bookstandDutySessions.find((s) => s.status === 'Active' && s.serviceDate === serviceDate) ||
+      bookstandDutySessions.find((s) => s.status === 'Active') ||
+      null
+    );
+  }, [bookstandDutySessions, serviceDate]);
+
+  // Complaints & Handover Modal States
+  const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
+  const [handoverNotes, setHandoverNotes] = useState('');
+
+  const [complaintForm, setComplaintForm] = useState<{
+    submittedBy: string;
+    submittedByPhone: string;
+    category: BookstandComplaint['category'];
+    subject: string;
+    description: string;
+    photoUrl: string;
+  }>({
+    submittedBy: currentUser?.name || '',
+    submittedByPhone: currentUser?.phone || '',
+    category: 'Transaction Error',
+    subject: '',
+    description: '',
+    photoUrl: '',
+  });
+
+  // Filters for activities and complaints tabs
+  const [activityMemberFilter, setActivityMemberFilter] = useState<string>('all');
+  const [activityTypeFilter, setActivityTypeFilter] = useState<string>('all');
+  const [complaintStatusFilter, setComplaintStatusFilter] = useState<string>('all');
+  const [complaintCategoryFilter, setComplaintCategoryFilter] = useState<string>('all');
+  const [complaintSearchQuery, setComplaintSearchQuery] = useState<string>('');
 
   // Modals
   const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
@@ -367,6 +442,19 @@ export const BookstandModule: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
     });
 
+    addBookstandActivity({
+      sessionId: activeDutySession?.id || `session-${Date.now()}`,
+      serviceDate: serviceDate,
+      serviceType: serviceType,
+      officiatingMember: officiatingMember || currentUser.name,
+      activityType: 'Adjustment',
+      description: `Damaged copy recorded: ${damagedForm.quantity}x "${selectedBook.title}"`,
+      bookId: selectedBook.id,
+      bookTitle: selectedBook.title,
+      quantity: damagedForm.quantity,
+      notes: damagedForm.reason,
+    });
+
     setIsAddDamagedModalOpen(false);
     setDamagedForm({
       bookId: books[0]?.id || '',
@@ -395,6 +483,19 @@ export const BookstandModule: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
     });
 
+    addBookstandActivity({
+      sessionId: activeDutySession?.id || `session-${Date.now()}`,
+      serviceDate: new Date().toISOString().split('T')[0],
+      serviceType: serviceType,
+      officiatingMember: currentUser.name,
+      activityType: 'Stock Count',
+      description: `Stock discrepancy noted: ${missingForm.quantity}x "${selectedBook.title}"`,
+      bookId: selectedBook.id,
+      bookTitle: selectedBook.title,
+      quantity: missingForm.quantity,
+      notes: missingForm.reason,
+    });
+
     setIsAddMissingModalOpen(false);
     setMissingForm({
       bookId: books[0]?.id || '',
@@ -402,6 +503,63 @@ export const BookstandModule: React.FC = () => {
       reason: 'Physical count discrepancy identified during Sunday service audit',
     });
     alert('Missing book audit discrepancy logged successfully.');
+  };
+
+  const handleHandoverSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeDutySession) return;
+
+    endBookstandDutySession(
+      activeDutySession.id,
+      handoverNotes.trim() || 'Duty completed and bookstand handed over.'
+    );
+    setIsHandoverModalOpen(false);
+    setHandoverNotes('');
+    alert(`Officiating shift for ${activeDutySession.officiatingName} ended successfully with handover record saved.`);
+  };
+
+  const handleComplaintSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complaintForm.subject.trim() || !complaintForm.description.trim()) {
+      alert('Please fill in the subject and detailed description of the complaint/observation.');
+      return;
+    }
+
+    const reporter = complaintForm.submittedBy.trim() || officiatingMember || currentUser.name;
+    const currentSessionId = activeDutySession?.id || `adhoc-${Date.now()}`;
+
+    addBookstandComplaint({
+      sessionId: currentSessionId,
+      serviceDate: serviceDate,
+      serviceType: serviceType,
+      submittedBy: reporter,
+      submittedByPhone: complaintForm.submittedByPhone.trim() || currentUser.phone || '',
+      category: complaintForm.category,
+      subject: complaintForm.subject.trim(),
+      description: complaintForm.description.trim(),
+      photoUrl: complaintForm.photoUrl || undefined,
+    });
+
+    addBookstandActivity({
+      sessionId: currentSessionId,
+      serviceDate: serviceDate,
+      serviceType: serviceType,
+      officiatingMember: reporter,
+      activityType: 'Correction',
+      description: `Reported [${complaintForm.category}]: ${complaintForm.subject.trim()}`,
+      notes: complaintForm.description.trim(),
+    });
+
+    setIsComplaintModalOpen(false);
+    setComplaintForm({
+      submittedBy: currentUser.name,
+      submittedByPhone: currentUser.phone || '',
+      category: 'Transaction Error',
+      subject: '',
+      description: '',
+      photoUrl: '',
+    });
+    alert('Complaint / Issue reported successfully and submitted for Officer review.');
   };
 
   const handleExportCSV = () => {
@@ -474,6 +632,27 @@ export const BookstandModule: React.FC = () => {
             </>
           )}
           <button
+            onClick={() => setIsComplaintModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-xs cursor-pointer"
+            title="Report an error, discrepancy, missing book or observation"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Report Issue</span>
+          </button>
+          {activeDutySession && (
+            <button
+              onClick={() => {
+                setHandoverNotes('');
+                setIsHandoverModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors shadow-xs cursor-pointer"
+              title="Complete shift, log handover notes and sign out"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>End Shift &amp; Handover</span>
+            </button>
+          )}
+          <button
             onClick={() => setIsPrintModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer"
           >
@@ -539,16 +718,18 @@ export const BookstandModule: React.FC = () => {
         </div>
       </div>
 
-      {/* 7 Core Sub Tabs */}
+      {/* Core Sub Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800 no-scrollbar">
         {[
           { id: 'overview', label: '1. Overview', icon: LayoutDashboard },
           { id: 'inventory', label: `2. Book Inventory (${books.length})`, icon: BookOpen },
           { id: 'sales', label: `3. Sales & Transactions (${sales.length})`, icon: CreditCard },
-          { id: 'damaged', label: `4. Damaged / Broken (${damagedMovements.length})`, icon: AlertTriangle },
-          { id: 'missing', label: `5. Missing Books (${missingMovements.length})`, icon: PackageSearch },
-          { id: 'debts', label: `6. Debtors & Payments (${unpaidSales.length})`, icon: DollarSign },
-          { id: 'reports', label: '7. Reports & Valuation', icon: Printer },
+          { id: 'activities', label: `4. Duty Activity History (${bookstandActivities.length})`, icon: History },
+          { id: 'complaints', label: `5. Complaints & Issues (${bookstandComplaints.length})`, icon: MessageSquare },
+          { id: 'damaged', label: `6. Damaged / Broken (${damagedMovements.length})`, icon: AlertTriangle },
+          { id: 'missing', label: `7. Missing Books (${missingMovements.length})`, icon: PackageSearch },
+          { id: 'debts', label: `8. Debtors & Payments (${unpaidSales.length})`, icon: DollarSign },
+          { id: 'reports', label: '9. Reports & Valuation', icon: Printer },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -878,6 +1059,375 @@ export const BookstandModule: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* TAB: INDIVIDUAL OFFICIATING ACTIVITY HISTORY                  */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'activities' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                  <History className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Individual Officiating Activity History &amp; Audit Log
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Detailed chronological activity record for every member officiating at the Bookstand. Searchable by member, service date, and activity type.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-xs font-bold">
+                Total Activities: {bookstandActivities.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="p-4 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search activities, members, books..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={activityMemberFilter}
+                onChange={(e) => setActivityMemberFilter(e.target.value)}
+                className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="all">All Officiating Members</option>
+                {Array.from(new Set(bookstandActivities.map((a) => a.officiatingMember))).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={activityTypeFilter}
+                onChange={(e) => setActivityTypeFilter(e.target.value)}
+                className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="all">All Activity Types</option>
+                <option value="Sale">Retail Sale</option>
+                <option value="Issue">Literature Issued</option>
+                <option value="Adjustment">Damaged / Adjustment</option>
+                <option value="Stock Count">Stock Discrepancy Count</option>
+                <option value="Correction">Correction / Complaint</option>
+                <option value="Handover">Shift Handover</option>
+                <option value="General">General Duty</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Activity Cards Feed */}
+          {(() => {
+            const filteredActivities = bookstandActivities.filter((act) => {
+              const matchesMember =
+                activityMemberFilter === 'all' ||
+                act.officiatingMember.toLowerCase() === activityMemberFilter.toLowerCase();
+              const matchesType = activityTypeFilter === 'all' || act.activityType === activityTypeFilter;
+              const matchesSearch =
+                !searchQuery ||
+                act.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                act.officiatingMember.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (act.bookTitle && act.bookTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (act.customerName && act.customerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (act.notes && act.notes.toLowerCase().includes(searchQuery.toLowerCase()));
+
+              return matchesMember && matchesType && matchesSearch;
+            });
+
+            if (filteredActivities.length === 0) {
+              return (
+                <div className="p-8 text-center bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+                  No activity history records found matching this filter.
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {filteredActivities.map((act) => {
+                  const typeColors: Record<string, string> = {
+                    Sale: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/40',
+                    Issue: 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-300/40',
+                    Adjustment: 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/40',
+                    'Stock Count': 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/40',
+                    Correction: 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/40',
+                    Handover: 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300/40',
+                    General: 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-300/40',
+                  };
+
+                  return (
+                    <div
+                      key={act.id}
+                      className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-all space-y-2.5"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-black text-xs flex items-center justify-center shrink-0">
+                            {act.officiatingMember.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                {act.officiatingMember}
+                              </span>
+                              <span
+                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                  typeColors[act.activityType] || typeColors.General
+                                }`}
+                              >
+                                {act.activityType}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              {act.serviceType} • {formatDate(act.serviceDate)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-left sm:text-right text-[11px] text-slate-400">
+                          {act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Logged'}
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
+                        {act.description}
+                      </div>
+
+                      {(act.amount !== undefined || act.quantity !== undefined || act.customerName || act.notes) && (
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 text-[11px] flex flex-wrap items-center gap-3">
+                          {act.quantity !== undefined && (
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Quantity: <strong className="text-slate-900 dark:text-white">{act.quantity} copies</strong>
+                            </span>
+                          )}
+                          {act.amount !== undefined && (
+                            <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                              Amount: {formatNaira(act.amount)}
+                            </span>
+                          )}
+                          {act.customerName && (
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Customer: <strong className="text-slate-900 dark:text-white">{act.customerName}</strong>
+                            </span>
+                          )}
+                          {act.notes && (
+                            <span className="text-slate-500 italic">
+                              Note: {act.notes}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* TAB: COMPLAINTS, ISSUES AND OBSERVATIONS                      */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'complaints' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Complaints, Issues and Observations
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Official reporting channel for transaction errors, missing books, handover incidents, and operational observations.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsComplaintModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md cursor-pointer hover:scale-102 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Report Issue / Observation</span>
+            </button>
+          </div>
+
+          {/* Filter Pills and Search */}
+          <div className="p-4 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search subject, details, submitter..."
+                value={complaintSearchQuery}
+                onChange={(e) => setComplaintSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={complaintStatusFilter}
+                onChange={(e) => setComplaintStatusFilter(e.target.value)}
+                className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="Open">Open Issues</option>
+                <option value="Acknowledged">Acknowledged</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+
+              <select
+                value={complaintCategoryFilter}
+                onChange={(e) => setComplaintCategoryFilter(e.target.value)}
+                className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="all">All Categories</option>
+                <option value="Transaction Error">Transaction Error</option>
+                <option value="Missing Item">Missing Item</option>
+                <option value="Quantity Discrepancy">Quantity Discrepancy</option>
+                <option value="Handover Issue">Handover Issue</option>
+                <option value="Operational Problem">Operational Problem</option>
+                <option value="Observation">Observation</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Complaints Feed */}
+          {(() => {
+            const filteredComplaints = bookstandComplaints.filter((c) => {
+              const matchesStatus = complaintStatusFilter === 'all' || c.status === complaintStatusFilter;
+              const matchesCategory =
+                complaintCategoryFilter === 'all' || c.category === complaintCategoryFilter;
+              const matchesSearch =
+                !complaintSearchQuery ||
+                c.subject.toLowerCase().includes(complaintSearchQuery.toLowerCase()) ||
+                c.description.toLowerCase().includes(complaintSearchQuery.toLowerCase()) ||
+                c.submittedBy.toLowerCase().includes(complaintSearchQuery.toLowerCase());
+
+              return matchesStatus && matchesCategory && matchesSearch;
+            });
+
+            if (filteredComplaints.length === 0) {
+              return (
+                <div className="p-8 text-center bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+                  No complaints or observations reported matching current filter.
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {filteredComplaints.map((c) => {
+                  const statusColors: Record<string, string> = {
+                    Open: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-300',
+                    Acknowledged: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300',
+                    'Under Review': 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border-blue-300',
+                    Resolved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300',
+                  };
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-5 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300">
+                            {c.category}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                              statusColors[c.status] || statusColors.Open
+                            }`}
+                          >
+                            {c.status}
+                          </span>
+                        </div>
+
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {c.serviceType} • {formatDate(c.serviceDate)}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          {c.subject}
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 whitespace-pre-wrap leading-relaxed">
+                          {c.description}
+                        </p>
+                      </div>
+
+                      {/* Supporting Photo Evidence */}
+                      {c.photoUrl && (
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Attached Photo Evidence:
+                          </span>
+                          <img
+                            src={c.photoUrl}
+                            alt="Complaint proof"
+                            className="max-h-48 rounded-lg object-contain border border-slate-200 dark:border-slate-700 cursor-pointer"
+                            onClick={() => window.open(c.photoUrl, '_blank')}
+                          />
+                        </div>
+                      )}
+
+                      {/* Submitter & Timeline Info */}
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                        <div>
+                          Reported by: <strong className="text-slate-700 dark:text-slate-200">{c.submittedBy}</strong>
+                          {c.submittedByPhone && ` (${c.submittedByPhone})`}
+                        </div>
+
+                        {c.resolutionNotes && (
+                          <div className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                            Resolved by {c.resolvedBy || 'Officer'}: "{c.resolutionNotes}"
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Follow-up Comments Thread */}
+                      {c.followUpComments && c.followUpComments.length > 0 && (
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                          <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                            Officer Follow-Up Notes ({c.followUpComments.length}):
+                          </span>
+                          {c.followUpComments.map((comment) => (
+                            <div key={comment.id} className="text-slate-600 dark:text-slate-300 text-[11px]">
+                              <strong className="text-purple-600 dark:text-purple-400">{comment.commentBy}</strong> ({new Date(comment.timestamp).toLocaleDateString()}): {comment.message}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -2039,6 +2589,262 @@ export const BookstandModule: React.FC = () => {
           </table>
         </div>
       </PrintModal>
+
+      {/* ------------------------------------------------------------- */}
+      {/* END SHIFT & HANDOVER MODAL                                    */}
+      {/* ------------------------------------------------------------- */}
+      {isHandoverModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E172B] rounded-3xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    End Duty Shift &amp; Handover
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {activeDutySession?.officiatingName || officiatingMember} • {activeDutySession?.serviceType || serviceType}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsHandoverModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Shift Performance Summary */}
+            {(() => {
+              const shiftSales = sales.filter(
+                (s) =>
+                  s.saleDate === serviceDate &&
+                  (s.recordedBy?.toLowerCase() === (activeDutySession?.officiatingName || officiatingMember).toLowerCase() ||
+                    s.saleDate === serviceDate)
+              );
+              const shiftUnits = shiftSales.reduce(
+                (sum, s) => sum + s.items.reduce((iSum, i) => iSum + i.quantity, 0),
+                0
+              );
+              const shiftRevenue = shiftSales.reduce((sum, s) => sum + s.totalAmount, 0);
+              const shiftComplaints = bookstandComplaints.filter(
+                (c) =>
+                  c.sessionId === activeDutySession?.id ||
+                  (c.serviceDate === serviceDate &&
+                    c.submittedBy.toLowerCase() === (activeDutySession?.officiatingName || officiatingMember).toLowerCase())
+              );
+
+              return (
+                <div className="p-3.5 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/50 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Books Sold
+                    </span>
+                    <span className="text-base font-black text-slate-900 dark:text-white">
+                      {shiftUnits} copies
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Shift Sales
+                    </span>
+                    <span className="text-base font-black text-purple-700 dark:text-purple-300">
+                      {formatNaira(shiftRevenue)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Issues Logged
+                    </span>
+                    <span className="text-base font-black text-amber-600 dark:text-amber-400">
+                      {shiftComplaints.length}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <form onSubmit={handleHandoverSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Handover Notes &amp; Closing Physical Count *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="e.g. Verified remaining physical copies on table. Cash envelope handed over to HOD/Finance. No damaged copies today..."
+                  value={handoverNotes}
+                  onChange={(e) => setHandoverNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsHandoverModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black shadow-md cursor-pointer"
+                >
+                  Confirm Handover &amp; Complete Shift
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* REPORT COMPLAINT, ISSUE OR OBSERVATION MODAL                  */}
+      {/* ------------------------------------------------------------- */}
+      {isComplaintModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E172B] rounded-3xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-100 border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Report Complaint, Issue or Observation
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Dominion City Asaba Bookstand • {formatDate(serviceDate)} ({serviceType})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsComplaintModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleComplaintSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Reporting Member *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={complaintForm.submittedBy}
+                      onChange={(e) => setComplaintForm({ ...complaintForm, submittedBy: e.target.value })}
+                      placeholder="Your full name"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={complaintForm.submittedByPhone}
+                      onChange={(e) => setComplaintForm({ ...complaintForm, submittedByPhone: e.target.value })}
+                      placeholder="+234..."
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Complaint / Observation Category *
+                  </label>
+                  <select
+                    value={complaintForm.category}
+                    onChange={(e) =>
+                      setComplaintForm({
+                        ...complaintForm,
+                        category: e.target.value as BookstandComplaint['category'],
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+                  >
+                    <option value="Transaction Error">Transaction Error (e.g. wrong amount, double entry)</option>
+                    <option value="Missing Item">Missing Book / Item</option>
+                    <option value="Quantity Discrepancy">Quantity Discrepancy between records &amp; stand</option>
+                    <option value="Handover Issue">Handover Incident / Float Discrepancy</option>
+                    <option value="Operational Problem">Operational Problem / Logistics</option>
+                    <option value="Observation">General Stand Observation</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Subject / Short Summary *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 2 copies of 'Spiritual Warfare' unaccounted for after 1st service"
+                    value={complaintForm.subject}
+                    onChange={(e) => setComplaintForm({ ...complaintForm, subject: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Detailed Description of Incident / Observation *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Provide full details: when it was noticed, people involved, receipt numbers, title names, and any actions already taken..."
+                    value={complaintForm.description}
+                    onChange={(e) => setComplaintForm({ ...complaintForm, description: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                {/* Photo Evidence Upload */}
+                <div>
+                  <ImageUploadInput
+                    label="Attach Photograph Evidence or Receipt Proof (Optional)"
+                    value={complaintForm.photoUrl}
+                    onChange={(dataUrl) => setComplaintForm({ ...complaintForm, photoUrl: dataUrl })}
+                    placeholderText="Tap to take a photo of the damaged book, POS slip, or audit sheet"
+                    aspectRatioHint="Clear camera capture or screenshot"
+                  />
+                </div>
+              </div>
+
+              <div className="px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-end gap-2 bg-white/95 dark:bg-[#0E172B]/95">
+                <button
+                  type="button"
+                  onClick={() => setIsComplaintModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md cursor-pointer transition-all hover:scale-102 flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Submit Complaint / Observation</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

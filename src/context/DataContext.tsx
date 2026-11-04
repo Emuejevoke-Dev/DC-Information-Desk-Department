@@ -12,6 +12,7 @@ import {
   HandbookEntry,
   InformationCollection,
   LostItem,
+  LostItemStatus,
   SatelliteChurch,
   ServiceReport,
   ServiceRoster,
@@ -22,6 +23,31 @@ import {
   AbsenceFollowUp,
   TableDocument,
   TableDocumentRow,
+  BookstandDutySession,
+  BookstandExpense,
+  BookstandActivityEntry,
+  BookstandComplaint,
+  BookstandComplaintStatus,
+  ChurchLocationConfig,
+  BirthdayCelebration,
+  BirthdayTemplate,
+  ShareHistoryEntry,
+  ShareStatus,
+  DepartmentEvent,
+  ChurchProgramme,
+  DepartmentReminder,
+  WelfareTeamMember,
+  WelfareFollowUpLog,
+  WelfareCase,
+  VisitationSchedule,
+  DepartmentComplaint,
+  DepartmentMonthlyReport,
+  CentralComplaintStatus,
+  MonthlyReportStatus,
+  HRDDepartmentalMessage,
+  HRDMessageResponse,
+  HRDMessageStatus,
+  LeadershipMeeting,
 } from '../types/models';
 import {
   INITIAL_BOOKS,
@@ -44,6 +70,25 @@ import {
   INITIAL_ATTENDANCE,
   INITIAL_FINALIZED_ATTENDANCE,
   INITIAL_ABSENCE_FOLLOW_UPS,
+  INITIAL_BOOKSTAND_DUTY_SESSIONS,
+  INITIAL_BOOKSTAND_EXPENSES,
+  INITIAL_BOOKSTAND_ACTIVITIES,
+  INITIAL_BOOKSTAND_COMPLAINTS,
+  DEFAULT_CHURCH_LOCATION,
+  INITIAL_BIRTHDAY_TEMPLATES,
+  INITIAL_BIRTHDAY_CELEBRATIONS,
+  INITIAL_SHARE_HISTORY,
+  INITIAL_DEPARTMENT_EVENTS,
+  INITIAL_CHURCH_PROGRAMMES,
+  INITIAL_DEPARTMENT_REMINDERS,
+  INITIAL_WELFARE_TEAM,
+  INITIAL_WELFARE_FOLLOW_UPS,
+  INITIAL_WELFARE_CASES,
+  INITIAL_VISITATIONS,
+  INITIAL_DEPARTMENT_COMPLAINTS,
+  INITIAL_MONTHLY_REPORTS,
+  INITIAL_HRD_MESSAGES,
+  INITIAL_LEADERSHIP_MEETINGS,
 } from '../data/initialData';
 
 interface DataContextType {
@@ -64,15 +109,23 @@ interface DataContextType {
   books: Book[];
   stockMovements: StockMovement[];
   sales: BookSale[];
+  bookstandDutySessions: BookstandDutySession[];
+  bookstandExpenses: BookstandExpense[];
   handbook: HandbookEntry[];
   attendance: AttendanceRecord[];
   finalizedAttendance: FinalizedAttendanceReport[];
   absenceFollowUps: AbsenceFollowUp[];
+  churchLocationConfig: ChurchLocationConfig;
+  birthdayCelebrations: BirthdayCelebration[];
+  birthdayTemplates: BirthdayTemplate[];
+  shareHistory: ShareHistoryEntry[];
 
   // Mutators
   addAttendanceRecord: (record: Omit<AttendanceRecord, 'id' | 'createdAt'>) => void;
   deleteAttendanceRecord: (id: string) => void;
   updateAttendanceRecord: (id: string, record: Partial<AttendanceRecord>) => void;
+  clockOutAttendanceRecord: (id: string, clockOutTime?: string) => void;
+  updateChurchLocationConfig: (config: Partial<ChurchLocationConfig>) => void;
   finalizeAttendance: (report: Omit<FinalizedAttendanceReport, 'id' | 'closedAt'>) => void;
   reopenAttendance: (id: string, reopenedBy: string) => void;
   addAbsenceFollowUp: (fu: Omit<AbsenceFollowUp, 'id'>) => void;
@@ -85,6 +138,8 @@ interface DataContextType {
   addLostItem: (item: Omit<LostItem, 'id' | 'createdAt' | 'updatedAt' | 'history'>) => void;
   updateLostItem: (id: string, item: Partial<LostItem>) => void;
   claimLostItem: (id: string, claimant: string, phone: string, witness: string, notes?: string) => void;
+  returnLostItem: (id: string, dateReturned: string, notes?: string) => void;
+  deleteLostItem: (id: string) => void;
 
   addAnnouncement: (ann: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateAnnouncement: (id: string, ann: Partial<Announcement>) => void;
@@ -132,6 +187,16 @@ interface DataContextType {
   recordBookSale: (sale: Omit<BookSale, 'id' | 'createdAt' | 'payments'>, initialPayment?: number) => void;
   recordDebtPayment: (saleId: string, amount: number, recordedBy: string, receiptNumber?: string) => void;
   addStockMovement: (sm: Omit<StockMovement, 'id' | 'createdAt'>) => void;
+  startBookstandDutySession: (session: Omit<BookstandDutySession, 'id' | 'signedInAt' | 'status'>) => BookstandDutySession;
+  endBookstandDutySession: (sessionId: string, handoverNotes?: string) => void;
+  addBookstandExpense: (exp: Omit<BookstandExpense, 'id' | 'createdAt'>) => void;
+  deleteBookstandExpense: (id: string) => void;
+  bookstandActivities: BookstandActivityEntry[];
+  addBookstandActivity: (activity: Omit<BookstandActivityEntry, 'id' | 'timestamp'>) => void;
+  bookstandComplaints: BookstandComplaint[];
+  addBookstandComplaint: (complaint: Omit<BookstandComplaint, 'id' | 'submittedAt' | 'status' | 'followUpComments'>) => void;
+  updateBookstandComplaintStatus: (id: string, status: BookstandComplaintStatus, resolutionNotes?: string, resolvedBy?: string) => void;
+  addBookstandComplaintComment: (complaintId: string, message: string, commentBy: string) => void;
 
   // Custom Report Categories
   reportCategories: string[];
@@ -147,6 +212,82 @@ interface DataContextType {
   addHandbookEntry: (hb: Omit<HandbookEntry, 'id' | 'updatedAt'>) => void;
   updateHandbookEntry: (id: string, hb: Partial<HandbookEntry>) => void;
   deleteHandbookEntry: (id: string) => void;
+
+  // Birthday Customisation & Celebrations
+  saveBirthdayCelebration: (celebration: Omit<BirthdayCelebration, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateBirthdayCelebration: (id: string, celebration: Partial<BirthdayCelebration>) => void;
+  deleteBirthdayCelebration: (id: string) => void;
+  saveBirthdayTemplate: (template: Omit<BirthdayTemplate, 'id'>) => void;
+  deleteBirthdayTemplate: (id: string) => void;
+
+  // Global Sharing Functionality & History
+  addShareHistoryEntry: (entry: Omit<ShareHistoryEntry, 'id' | 'date'>) => ShareHistoryEntry;
+  updateShareHistoryStatus: (id: string, status: ShareStatus, notes?: string) => void;
+  deleteShareHistoryEntry: (id: string) => void;
+
+  // Secretary Coordination & Events Management
+  departmentEvents: DepartmentEvent[];
+  addDepartmentEvent: (event: Omit<DepartmentEvent, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateDepartmentEvent: (id: string, updates: Partial<DepartmentEvent>) => void;
+  deleteDepartmentEvent: (id: string) => void;
+
+  churchProgrammes: ChurchProgramme[];
+  addChurchProgramme: (programme: Omit<ChurchProgramme, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateChurchProgramme: (id: string, updates: Partial<ChurchProgramme>) => void;
+  deleteChurchProgramme: (id: string) => void;
+
+  departmentReminders: DepartmentReminder[];
+  addDepartmentReminder: (reminder: Omit<DepartmentReminder, 'id' | 'createdAt'>) => void;
+  updateDepartmentReminder: (id: string, updates: Partial<DepartmentReminder>) => void;
+  toggleReminderCompletion: (id: string, completedBy: string) => void;
+  deleteDepartmentReminder: (id: string) => void;
+
+  // Welfare Department
+  welfareTeam: WelfareTeamMember[];
+  addWelfareTeamMember: (member: Omit<WelfareTeamMember, 'id' | 'addedAt' | 'updatedAt'>) => void;
+  updateWelfareTeamMember: (id: string, updates: Partial<WelfareTeamMember>) => void;
+  removeWelfareTeamMember: (id: string) => void;
+
+  welfareFollowUps: WelfareFollowUpLog[];
+  recordWelfareFollowUp: (followUp: Omit<WelfareFollowUpLog, 'id' | 'createdAt'>) => void;
+  updateWelfareFollowUp: (id: string, updates: Partial<WelfareFollowUpLog>) => void;
+
+  welfareCases: WelfareCase[];
+  addWelfareCase: (wcase: Omit<WelfareCase, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateWelfareCase: (id: string, updates: Partial<WelfareCase>) => void;
+  escalateWelfareCaseToHOD: (id: string, escalationNotes: string, requestedBy: string) => void;
+  respondToWelfareEscalation: (id: string, hodNotes: string, status: any, resolutionNotes?: string) => void;
+
+  visitations: VisitationSchedule[];
+  addVisitationSchedule: (visitation: Omit<VisitationSchedule, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateVisitationSchedule: (id: string, updates: Partial<VisitationSchedule>) => void;
+  completeVisitation: (id: string, outcome: string, completedBy: string, followUpDate?: string) => void;
+
+  // Central Complaints & Escalation System
+  departmentComplaints: DepartmentComplaint[];
+  submitDepartmentComplaint: (complaint: Omit<DepartmentComplaint, 'id' | 'createdAt' | 'updatedAt' | 'resolutionHistory'>) => void;
+  updateComplaintStatus: (id: string, status: CentralComplaintStatus, notes: string, performedBy: string) => void;
+  addHODComplaintComment: (id: string, comment: string, performedBy: string) => void;
+
+  // Coordinated Monthly Departmental Reports
+  monthlyReports: DepartmentMonthlyReport[];
+  saveMonthlyReport: (report: Omit<DepartmentMonthlyReport, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => void;
+  submitMonthlyReport: (id: string, submittedBy: string) => void;
+  reviewMonthlyReport: (id: string, status: MonthlyReportStatus, reviewNotes: string, reviewedBy: string) => void;
+
+  // HRD Office & Departmental Messages
+  hrdMessages: HRDDepartmentalMessage[];
+  submitHRDMessage: (message: Omit<HRDDepartmentalMessage, 'id' | 'referenceNumber' | 'submissionDate' | 'status' | 'responses' | 'createdAt' | 'updatedAt'>) => HRDDepartmentalMessage;
+  updateHRDMessageStatus: (id: string, status: HRDMessageStatus, privateNotes?: string) => void;
+  addHRDMessageResponse: (messageId: string, response: Omit<HRDMessageResponse, 'id' | 'timestamp'>, newStatus?: HRDMessageStatus) => void;
+  assignHRDMessage: (id: string, assignedOfficer: string) => void;
+
+  // Leadership Meetings & Monthly Assemblies (HRD Office)
+  leadershipMeetings: LeadershipMeeting[];
+  addLeadershipMeeting: (meeting: Omit<LeadershipMeeting, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateLeadershipMeeting: (id: string, updates: Partial<LeadershipMeeting>) => void;
+  deleteLeadershipMeeting: (id: string) => void;
+  updateActionPointStatus: (meetingId: string, actionPointId: string, status: 'Pending' | 'In Progress' | 'Completed') => void;
 
   // System
   resetToInitialData: () => void;
@@ -209,6 +350,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [books, setBooks] = useStoredState<Book[]>('books', INITIAL_BOOKS);
   const [stockMovements, setStockMovements] = useStoredState<StockMovement[]>('stockMovements', INITIAL_STOCK_MOVEMENTS);
   const [sales, setSales] = useStoredState<BookSale[]>('sales', INITIAL_SALES);
+  const [bookstandDutySessions, setBookstandDutySessions] = useStoredState<BookstandDutySession[]>(
+    'bookstandDutySessions',
+    INITIAL_BOOKSTAND_DUTY_SESSIONS
+  );
+  const [bookstandExpenses, setBookstandExpenses] = useStoredState<BookstandExpense[]>(
+    'bookstandExpenses',
+    INITIAL_BOOKSTAND_EXPENSES
+  );
+  const [bookstandActivities, setBookstandActivities] = useStoredState<BookstandActivityEntry[]>(
+    'bookstandActivities',
+    INITIAL_BOOKSTAND_ACTIVITIES
+  );
+  const [bookstandComplaints, setBookstandComplaints] = useStoredState<BookstandComplaint[]>(
+    'bookstandComplaints',
+    INITIAL_BOOKSTAND_COMPLAINTS
+  );
   const [handbook, setHandbook] = useStoredState<HandbookEntry[]>('handbook', INITIAL_HANDBOOK);
   const [attendance, setAttendance] = useStoredState<AttendanceRecord[]>('attendance', INITIAL_ATTENDANCE);
   const [finalizedAttendance, setFinalizedAttendance] = useStoredState<FinalizedAttendanceReport[]>(
@@ -218,6 +375,78 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [absenceFollowUps, setAbsenceFollowUps] = useStoredState<AbsenceFollowUp[]>(
     'absence_follow_ups',
     INITIAL_ABSENCE_FOLLOW_UPS
+  );
+  const [churchLocationConfig, setChurchLocationConfig] = useStoredState<ChurchLocationConfig>(
+    'church_location_config',
+    DEFAULT_CHURCH_LOCATION
+  );
+  const [birthdayCelebrations, setBirthdayCelebrations] = useStoredState<BirthdayCelebration[]>(
+    'birthday_celebrations_v1',
+    INITIAL_BIRTHDAY_CELEBRATIONS
+  );
+  const [birthdayTemplates, setBirthdayTemplates] = useStoredState<BirthdayTemplate[]>(
+    'birthday_templates_v1',
+    INITIAL_BIRTHDAY_TEMPLATES
+  );
+  const [shareHistory, setShareHistory] = useStoredState<ShareHistoryEntry[]>(
+    'share_history_v1',
+    INITIAL_SHARE_HISTORY
+  );
+
+  // Secretary Coordination & Events Management
+  const [departmentEvents, setDepartmentEvents] = useStoredState<DepartmentEvent[]>(
+    'department_events_v1',
+    INITIAL_DEPARTMENT_EVENTS
+  );
+  const [churchProgrammes, setChurchProgrammes] = useStoredState<ChurchProgramme[]>(
+    'church_programmes_v1',
+    INITIAL_CHURCH_PROGRAMMES
+  );
+  const [departmentReminders, setDepartmentReminders] = useStoredState<DepartmentReminder[]>(
+    'department_reminders_v1',
+    INITIAL_DEPARTMENT_REMINDERS
+  );
+
+  // Dedicated Welfare Department
+  const [welfareTeam, setWelfareTeam] = useStoredState<WelfareTeamMember[]>(
+    'welfare_team_v1',
+    INITIAL_WELFARE_TEAM
+  );
+  const [welfareFollowUps, setWelfareFollowUps] = useStoredState<WelfareFollowUpLog[]>(
+    'welfare_followups_v1',
+    INITIAL_WELFARE_FOLLOW_UPS
+  );
+  const [welfareCases, setWelfareCases] = useStoredState<WelfareCase[]>(
+    'welfare_cases_v1',
+    INITIAL_WELFARE_CASES
+  );
+  const [visitations, setVisitations] = useStoredState<VisitationSchedule[]>(
+    'visitations_v1',
+    INITIAL_VISITATIONS
+  );
+
+  // Central Complaints & Escalations
+  const [departmentComplaints, setDepartmentComplaints] = useStoredState<DepartmentComplaint[]>(
+    'department_complaints_v1',
+    INITIAL_DEPARTMENT_COMPLAINTS
+  );
+
+  // Coordinated Monthly Departmental Reports
+  const [monthlyReports, setMonthlyReports] = useStoredState<DepartmentMonthlyReport[]>(
+    'monthly_reports_v1',
+    INITIAL_MONTHLY_REPORTS
+  );
+
+  // HRD Office & Departmental Messages
+  const [hrdMessages, setHrdMessages] = useStoredState<HRDDepartmentalMessage[]>(
+    'hrd_messages_v1',
+    INITIAL_HRD_MESSAGES
+  );
+
+  // Leadership Meetings & Monthly Assemblies (HRD Office)
+  const [leadershipMeetings, setLeadershipMeetings] = useStoredState<LeadershipMeeting[]>(
+    'leadership_meetings_v1',
+    INITIAL_LEADERSHIP_MEETINGS
   );
 
   // Custom service report categories (retaining the 4 core categories and allowing custom ones)
@@ -295,6 +524,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateAttendanceRecord = (id: string, record: Partial<AttendanceRecord>) => {
     setAttendance((prev) => prev.map((a) => (a.id === id ? { ...a, ...record } : a)));
+  };
+
+  const clockOutAttendanceRecord = (id: string, clockOutTime?: string) => {
+    const timeStr =
+      clockOutTime ||
+      new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+    setAttendance((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: 'Clocked Out',
+              clockOutTime: timeStr,
+            }
+          : a
+      )
+    );
+  };
+
+  const updateChurchLocationConfig = (config: Partial<ChurchLocationConfig>) => {
+    setChurchLocationConfig((prev) => ({
+      ...prev,
+      ...config,
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
   const finalizeAttendance = (report: Omit<FinalizedAttendanceReport, 'id' | 'closedAt'>) => {
@@ -448,6 +707,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return item;
       })
     );
+  };
+
+  const returnLostItem = (id: string, dateReturned: string, notes?: string) => {
+    const timestamp = new Date().toISOString();
+    setLostItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          return {
+            ...item,
+            status: 'Returned' as LostItemStatus,
+            recoveryDate: dateReturned || item.recoveryDate,
+            notes: notes ? `${item.notes || ''} | Returned: ${notes}` : item.notes,
+            history: [
+              ...item.history,
+              {
+                id: `hist-${Date.now()}`,
+                timestamp,
+                action: 'Item Released and Returned to Verified Owner',
+                performedBy: 'Information Desk Officer',
+                notes: notes || 'Physical possession returned to owner.',
+              },
+            ],
+            updatedAt: timestamp,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const deleteLostItem = (id: string) => {
+    setLostItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   // Announcements
@@ -821,6 +1112,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setSales((prev) => [newSale, ...prev]);
 
+    // Automatically record activity entry for active duty session
+    const activeSession = bookstandDutySessions.find(
+      (s) => s.status === 'Active' || s.serviceDate === sale.saleDate
+    );
+    const soldItemsDesc = sale.items.map((i) => `${i.quantity}x ${i.bookTitle}`).join(', ');
+    const newActivity: BookstandActivityEntry = {
+      id: `act-${Date.now()}`,
+      sessionId: activeSession?.id || `sess-${sale.saleDate}`,
+      serviceDate: sale.saleDate,
+      serviceType: sale.serviceType || activeSession?.serviceType || 'Bookstand Service',
+      officiatingMember: sale.recordedBy,
+      timestamp,
+      activityType: 'Sale',
+      description: `Sold ${soldItemsDesc} to ${sale.customerName || 'Customer'} (₦${sale.totalAmount.toLocaleString()} - ${sale.paymentStatus})`,
+      bookId: sale.items[0]?.bookId,
+      bookTitle: sale.items[0]?.bookTitle,
+      quantity: sale.items.reduce((sum, i) => sum + i.quantity, 0),
+      amount: sale.totalAmount,
+      customerName: sale.customerName,
+      notes: sale.notes,
+    };
+    setBookstandActivities((prev) => [newActivity, ...prev]);
+
     // Update book quantities
     setBooks((prev) =>
       prev.map((book) => {
@@ -884,6 +1198,150 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const startBookstandDutySession = (
+    session: Omit<BookstandDutySession, 'id' | 'signedInAt' | 'status'>
+  ): BookstandDutySession => {
+    const newSession: BookstandDutySession = {
+      ...session,
+      id: `duty-${Date.now()}`,
+      signedInAt: new Date().toISOString(),
+      status: 'Active',
+      initialCountVerified: true,
+    };
+    setBookstandDutySessions((prev) => [newSession, ...prev]);
+    return newSession;
+  };
+
+  const endBookstandDutySession = (sessionId: string, handoverNotes?: string) => {
+    const timestamp = new Date().toISOString();
+    setBookstandDutySessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              status: 'Completed',
+              signedOutAt: timestamp,
+              handoverNotes: handoverNotes || s.handoverNotes,
+            }
+          : s
+      )
+    );
+
+    const session = bookstandDutySessions.find((s) => s.id === sessionId);
+    if (session) {
+      const handoverActivity: BookstandActivityEntry = {
+        id: `act-${Date.now()}`,
+        sessionId: session.id,
+        serviceDate: session.serviceDate,
+        serviceType: session.serviceType,
+        officiatingMember: session.officiatingName,
+        timestamp,
+        activityType: 'Handover',
+        description: `Duty shift signed out. Handover notes: ${handoverNotes || 'Normal shift completion.'}`,
+        notes: handoverNotes,
+      };
+      setBookstandActivities((prev) => [handoverActivity, ...prev]);
+    }
+  };
+
+  const addBookstandActivity = (activity: Omit<BookstandActivityEntry, 'id' | 'timestamp'>) => {
+    const newAct: BookstandActivityEntry = {
+      ...activity,
+      id: `act-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    setBookstandActivities((prev) => [newAct, ...prev]);
+  };
+
+  const addBookstandComplaint = (
+    complaint: Omit<BookstandComplaint, 'id' | 'submittedAt' | 'status' | 'followUpComments'>
+  ) => {
+    const newComp: BookstandComplaint = {
+      ...complaint,
+      id: `comp-${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+      status: 'Open',
+      followUpComments: [],
+    };
+    setBookstandComplaints((prev) => [newComp, ...prev]);
+
+    // Also record as an activity on the duty session
+    const compActivity: BookstandActivityEntry = {
+      id: `act-${Date.now()}-comp`,
+      sessionId: complaint.sessionId,
+      serviceDate: complaint.serviceDate,
+      serviceType: complaint.serviceType,
+      officiatingMember: complaint.submittedBy,
+      timestamp: new Date().toISOString(),
+      activityType: 'Issue',
+      description: `Reported [${complaint.category}]: ${complaint.subject}`,
+      notes: complaint.description,
+    };
+    setBookstandActivities((prev) => [compActivity, ...prev]);
+  };
+
+  const updateBookstandComplaintStatus = (
+    id: string,
+    status: BookstandComplaintStatus,
+    resolutionNotes?: string,
+    resolvedBy?: string
+  ) => {
+    const timestamp = new Date().toISOString();
+    setBookstandComplaints((prev) =>
+      prev.map((c) => {
+        if (c.id === id) {
+          return {
+            ...c,
+            status,
+            resolutionNotes: resolutionNotes || c.resolutionNotes,
+            resolvedAt: status === 'Resolved' ? timestamp : c.resolvedAt,
+            resolvedBy: status === 'Resolved' ? (resolvedBy || 'Bookstand Officer') : c.resolvedBy,
+            acknowledgedBy: status === 'Acknowledged' || status === 'Under Review' ? (resolvedBy || 'Bookstand Officer') : c.acknowledgedBy,
+            acknowledgedAt: status === 'Acknowledged' || status === 'Under Review' ? timestamp : c.acknowledgedAt,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const addBookstandComplaintComment = (
+    complaintId: string,
+    message: string,
+    commentBy: string
+  ) => {
+    const newComment = {
+      id: `comm-${Date.now()}`,
+      commentBy,
+      timestamp: new Date().toISOString(),
+      message,
+    };
+    setBookstandComplaints((prev) =>
+      prev.map((c) => {
+        if (c.id === complaintId) {
+          return {
+            ...c,
+            followUpComments: [...c.followUpComments, newComment],
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const addBookstandExpense = (exp: Omit<BookstandExpense, 'id' | 'createdAt'>) => {
+    const newExp: BookstandExpense = {
+      ...exp,
+      id: `exp-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setBookstandExpenses((prev) => [newExp, ...prev]);
+  };
+
+  const deleteBookstandExpense = (id: string) => {
+    setBookstandExpenses((prev) => prev.filter((e) => e.id !== id));
+  };
+
   // Handbook
   const addHandbookEntry = (hb: Omit<HandbookEntry, 'id' | 'updatedAt'>) => {
     const newHB: HandbookEntry = {
@@ -906,6 +1364,588 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHandbook((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // -------------------------------------------------------------
+  // BIRTHDAY CUSTOMISATION & CELEBRATION
+  // -------------------------------------------------------------
+  const saveBirthdayCelebration = (
+    celebration: Omit<BirthdayCelebration, 'id' | 'createdAt' | 'updatedAt'>
+  ) => {
+    const existingIdx = birthdayCelebrations.findIndex((c) => c.memberId === celebration.memberId);
+    const now = new Date().toISOString();
+    if (existingIdx >= 0) {
+      const updated = [...birthdayCelebrations];
+      updated[existingIdx] = {
+        ...updated[existingIdx],
+        ...celebration,
+        updatedAt: now,
+      };
+      setBirthdayCelebrations(updated);
+    } else {
+      const newCel: BirthdayCelebration = {
+        ...celebration,
+        id: `cel-${Date.now()}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setBirthdayCelebrations([newCel, ...birthdayCelebrations]);
+    }
+  };
+
+  const updateBirthdayCelebration = (id: string, celebration: Partial<BirthdayCelebration>) => {
+    setBirthdayCelebrations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...celebration, updatedAt: new Date().toISOString() } : c))
+    );
+  };
+
+  const deleteBirthdayCelebration = (id: string) => {
+    setBirthdayCelebrations((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const saveBirthdayTemplate = (template: Omit<BirthdayTemplate, 'id'>) => {
+    const newTmpl: BirthdayTemplate = {
+      ...template,
+      id: `tmpl-${Date.now()}`,
+    };
+    setBirthdayTemplates((prev) => [newTmpl, ...prev]);
+  };
+
+  const deleteBirthdayTemplate = (id: string) => {
+    setBirthdayTemplates((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // -------------------------------------------------------------
+  // GLOBAL SHARING FUNCTIONALITY & HISTORY
+  // -------------------------------------------------------------
+  const addShareHistoryEntry = (
+    entry: Omit<ShareHistoryEntry, 'id' | 'date'>
+  ): ShareHistoryEntry => {
+    const newEntry: ShareHistoryEntry = {
+      ...entry,
+      id: `sh-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      date: new Date().toISOString(),
+    };
+    setShareHistory((prev) => [newEntry, ...prev]);
+    return newEntry;
+  };
+
+  const updateShareHistoryStatus = (id: string, status: ShareStatus, notes?: string) => {
+    setShareHistory((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status, ...(notes ? { notes } : {}) } : s))
+    );
+  };
+
+  const deleteShareHistoryEntry = (id: string) => {
+    setShareHistory((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // ============================================================================
+  // SECRETARY COORDINATION & EVENTS MANAGEMENT
+  // ============================================================================
+
+  const addDepartmentEvent = (event: Omit<DepartmentEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newEvent: DepartmentEvent = {
+      ...event,
+      id: `evt-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setDepartmentEvents((prev) => [newEvent, ...prev]);
+  };
+
+  const updateDepartmentEvent = (id: string, updates: Partial<DepartmentEvent>) => {
+    setDepartmentEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e))
+    );
+  };
+
+  const deleteDepartmentEvent = (id: string) => {
+    setDepartmentEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const addChurchProgramme = (programme: Omit<ChurchProgramme, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newProg: ChurchProgramme = {
+      ...programme,
+      id: `prog-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setChurchProgrammes((prev) => [newProg, ...prev]);
+  };
+
+  const updateChurchProgramme = (id: string, updates: Partial<ChurchProgramme>) => {
+    setChurchProgrammes((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
+    );
+  };
+
+  const deleteChurchProgramme = (id: string) => {
+    setChurchProgrammes((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const addDepartmentReminder = (reminder: Omit<DepartmentReminder, 'id' | 'createdAt'>) => {
+    const newRem: DepartmentReminder = {
+      ...reminder,
+      id: `rem-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setDepartmentReminders((prev) => [newRem, ...prev]);
+  };
+
+  const updateDepartmentReminder = (id: string, updates: Partial<DepartmentReminder>) => {
+    setDepartmentReminders((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    );
+  };
+
+  const toggleReminderCompletion = (id: string, completedBy: string) => {
+    setDepartmentReminders((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const willComplete = !r.isCompleted;
+        return {
+          ...r,
+          isCompleted: willComplete,
+          completedAt: willComplete ? new Date().toISOString() : undefined,
+          completedBy: willComplete ? completedBy : undefined,
+        };
+      })
+    );
+  };
+
+  const deleteDepartmentReminder = (id: string) => {
+    setDepartmentReminders((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // ============================================================================
+  // DEDICATED WELFARE DEPARTMENT MUTATORS
+  // ============================================================================
+
+  const addWelfareTeamMember = (member: Omit<WelfareTeamMember, 'id' | 'addedAt' | 'updatedAt'>) => {
+    const newMember: WelfareTeamMember = {
+      ...member,
+      id: `wteam-${Date.now()}`,
+      addedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setWelfareTeam((prev) => [...prev, newMember]);
+  };
+
+  const updateWelfareTeamMember = (id: string, updates: Partial<WelfareTeamMember>) => {
+    setWelfareTeam((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m))
+    );
+  };
+
+  const removeWelfareTeamMember = (id: string) => {
+    setWelfareTeam((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const recordWelfareFollowUp = (followUp: Omit<WelfareFollowUpLog, 'id' | 'createdAt'>) => {
+    const newFollowUp: WelfareFollowUpLog = {
+      ...followUp,
+      id: `wfup-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setWelfareFollowUps((prev) => [newFollowUp, ...prev]);
+  };
+
+  const updateWelfareFollowUp = (id: string, updates: Partial<WelfareFollowUpLog>) => {
+    setWelfareFollowUps((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, ...updates } : f))
+    );
+  };
+
+  const addWelfareCase = (wcase: Omit<WelfareCase, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newCase: WelfareCase = {
+      ...wcase,
+      id: `wcase-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setWelfareCases((prev) => [newCase, ...prev]);
+  };
+
+  const updateWelfareCase = (id: string, updates: Partial<WelfareCase>) => {
+    setWelfareCases((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c))
+    );
+  };
+
+  const escalateWelfareCaseToHOD = (id: string, escalationNotes: string, requestedBy: string) => {
+    const targetCase = welfareCases.find((c) => c.id === id);
+    setWelfareCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        return {
+          ...c,
+          isEscalatedToHOD: true,
+          escalationNotes,
+          escalatedAt: new Date().toISOString(),
+          status: 'Referred to HOD',
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+
+    // Also mirror into Central Complaints & Escalations so HOD sees it in centralized issues board
+    if (targetCase) {
+      submitDepartmentComplaint({
+        submittedBy: requestedBy,
+        submittedByRole: 'Welfare Coordinator',
+        department: 'Welfare',
+        submissionDate: new Date().toISOString().split('T')[0],
+        category: `Welfare Escalation: ${targetCase.category}`,
+        subject: `[Welfare Escalation] ${targetCase.memberName} — ${targetCase.category}`,
+        description: `${escalationNotes}\n\nCase Background: ${targetCase.description}`,
+        urgency: targetCase.urgency === 'Emergency' ? 'Critical' : targetCase.urgency,
+        status: 'New',
+      });
+    }
+  };
+
+  const respondToWelfareEscalation = (
+    id: string,
+    hodNotes: string,
+    status: any,
+    resolutionNotes?: string
+  ) => {
+    setWelfareCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        return {
+          ...c,
+          hodNotes,
+          hodReviewedAt: new Date().toISOString(),
+          status,
+          ...(resolutionNotes ? { resolutionNotes, resolvedAt: new Date().toISOString() } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const addVisitationSchedule = (visitation: Omit<VisitationSchedule, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newVis: VisitationSchedule = {
+      ...visitation,
+      id: `vis-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setVisitations((prev) => [newVis, ...prev]);
+  };
+
+  const updateVisitationSchedule = (id: string, updates: Partial<VisitationSchedule>) => {
+    setVisitations((prev) =>
+      prev.map((v) => (v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v))
+    );
+  };
+
+  const completeVisitation = (
+    id: string,
+    outcome: string,
+    completedBy: string,
+    followUpDate?: string
+  ) => {
+    setVisitations((prev) =>
+      prev.map((v) => {
+        if (v.id !== id) return v;
+        return {
+          ...v,
+          outcome,
+          status: 'Completed',
+          completedAt: new Date().toISOString(),
+          completedBy,
+          followUpVisitNeeded: Boolean(followUpDate),
+          followUpVisitDate: followUpDate,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  // ============================================================================
+  // CENTRAL COMPLAINTS & ESCALATION SYSTEM
+  // ============================================================================
+
+  const submitDepartmentComplaint = (
+    complaint: Omit<DepartmentComplaint, 'id' | 'createdAt' | 'updatedAt' | 'resolutionHistory'>
+  ) => {
+    const newComplaint: DepartmentComplaint = {
+      ...complaint,
+      id: `comp-${Date.now()}`,
+      resolutionHistory: [
+        {
+          id: `step-${Date.now()}`,
+          actionBy: complaint.submittedBy,
+          actionDate: new Date().toISOString(),
+          status: complaint.status || 'New',
+          notes: 'Complaint logged to Departmental Issues & Escalation Register.',
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setDepartmentComplaints((prev) => [newComplaint, ...prev]);
+  };
+
+  const updateComplaintStatus = (
+    id: string,
+    status: CentralComplaintStatus,
+    notes: string,
+    performedBy: string
+  ) => {
+    setDepartmentComplaints((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        const newStep = {
+          id: `step-${Date.now()}`,
+          actionBy: performedBy,
+          actionDate: new Date().toISOString(),
+          status,
+          notes,
+        };
+        return {
+          ...c,
+          status,
+          resolutionHistory: [...c.resolutionHistory, newStep],
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  const addHODComplaintComment = (id: string, comment: string, performedBy: string) => {
+    setDepartmentComplaints((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        return {
+          ...c,
+          hodComments: comment,
+          hodReviewedAt: new Date().toISOString(),
+          assignedOfficer: c.assignedOfficer || performedBy,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+
+  // ============================================================================
+  // COORDINATED MONTHLY REPORTING FOR ALL UNITS
+  // ============================================================================
+
+  const saveMonthlyReport = (
+    report: Omit<DepartmentMonthlyReport, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
+  ) => {
+    if (report.id) {
+      setMonthlyReports((prev) =>
+        prev.map((r) =>
+          r.id === report.id
+            ? { ...r, ...report, updatedAt: new Date().toISOString() }
+            : r
+        )
+      );
+    } else {
+      const newReport: DepartmentMonthlyReport = {
+        ...report,
+        id: `mrep-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setMonthlyReports((prev) => [newReport, ...prev]);
+    }
+  };
+
+  const submitMonthlyReport = (id: string, submittedBy: string) => {
+    setMonthlyReports((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: 'Submitted',
+              submittedBy,
+              submissionDate: new Date().toISOString().split('T')[0],
+              updatedAt: new Date().toISOString(),
+            }
+          : r
+      )
+    );
+  };
+
+  const reviewMonthlyReport = (
+    id: string,
+    status: MonthlyReportStatus,
+    reviewNotes: string,
+    reviewedBy: string
+  ) => {
+    setMonthlyReports((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status,
+              hodReviewNotes: reviewNotes,
+              reviewedAt: new Date().toISOString(),
+              reviewedBy,
+              updatedAt: new Date().toISOString(),
+            }
+          : r
+      )
+    );
+  };
+
+  // HRD Office & Departmental Messaging Mutators
+  const submitHRDMessage = (
+    msg: Omit<HRDDepartmentalMessage, 'id' | 'referenceNumber' | 'submissionDate' | 'status' | 'responses' | 'createdAt' | 'updatedAt'>
+  ): HRDDepartmentalMessage => {
+    const count = hrdMessages.length + 1;
+    const refNum = `HRD-MSG-2026-${String(count).padStart(4, '0')}`;
+    const now = new Date().toISOString();
+    const newMsg: HRDDepartmentalMessage = {
+      ...msg,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      referenceNumber: refNum,
+      submissionDate: now,
+      status: 'New',
+      responses: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setHrdMessages((prev) => [newMsg, ...prev]);
+
+    // If message is categorized as a Departmental Complaint or Operational Issue, mirror into complaints automatically
+    if (msg.category === 'Departmental Complaint' || msg.category === 'Operational Issue') {
+      submitDepartmentComplaint({
+        submittedBy: msg.senderName,
+        submittedByPhone: msg.senderPhone,
+        submittedByRole: msg.senderRole,
+        department: msg.senderDepartment,
+        submissionDate: now.split('T')[0],
+        category: msg.category,
+        subject: msg.subject,
+        description: msg.description,
+        urgency: msg.urgency === 'Urgent' ? 'Critical' : msg.urgency,
+        supportingEvidenceUrl: msg.attachmentUrl,
+        status: 'New',
+        isConfidential: true,
+      });
+    }
+
+    return newMsg;
+  };
+
+  const updateHRDMessageStatus = (id: string, status: HRDMessageStatus, privateNotes?: string) => {
+    setHrdMessages((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              status,
+              ...(privateNotes !== undefined ? { privateNotes } : {}),
+              updatedAt: new Date().toISOString(),
+            }
+          : m
+      )
+    );
+  };
+
+  const addHRDMessageResponse = (
+    messageId: string,
+    response: Omit<HRDMessageResponse, 'id' | 'timestamp'>,
+    newStatus?: HRDMessageStatus
+  ) => {
+    const now = new Date().toISOString();
+    const newResp: HRDMessageResponse = {
+      ...response,
+      id: `resp-${Date.now()}`,
+      timestamp: now,
+    };
+
+    setHrdMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              status: newStatus || (response.isFromHRD ? 'Under Review' : 'Awaiting Response'),
+              responses: [...m.responses, newResp],
+              updatedAt: now,
+            }
+          : m
+      )
+    );
+  };
+
+  const assignHRDMessage = (id: string, assignedOfficer: string) => {
+    setHrdMessages((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              assignedOfficer,
+              status: 'Under Review',
+              updatedAt: new Date().toISOString(),
+            }
+          : m
+      )
+    );
+  };
+
+  // Leadership Meetings & Monthly Assemblies Mutators
+  const addLeadershipMeeting = (meeting: Omit<LeadershipMeeting, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const now = new Date().toISOString();
+    const newMtg: LeadershipMeeting = {
+      ...meeting,
+      id: `lmtg-${Date.now()}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setLeadershipMeetings((prev) => [newMtg, ...prev]);
+  };
+
+  const updateLeadershipMeeting = (id: string, updates: Partial<LeadershipMeeting>) => {
+    setLeadershipMeetings((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            }
+          : m
+      )
+    );
+  };
+
+  const deleteLeadershipMeeting = (id: string) => {
+    setLeadershipMeetings((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const updateActionPointStatus = (
+    meetingId: string,
+    actionPointId: string,
+    status: 'Pending' | 'In Progress' | 'Completed'
+  ) => {
+    const now = new Date().toISOString();
+    setLeadershipMeetings((prev) =>
+      prev.map((m) => {
+        if (m.id !== meetingId || !m.actionPoints) return m;
+        return {
+          ...m,
+          actionPoints: m.actionPoints.map((ap) =>
+            ap.id === actionPointId
+              ? {
+                  ...ap,
+                  status,
+                  ...(status === 'Completed' ? { completedAt: now.split('T')[0] } : {}),
+                }
+              : ap
+          ),
+          updatedAt: now,
+        };
+      })
+    );
+  };
+
   // Reset to initial seed data
   const resetToInitialData = () => {
     if (confirm('Are you sure you want to reset all portal data to the Dominion City Asaba initial data?')) {
@@ -925,10 +1965,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBooks(INITIAL_BOOKS);
       setStockMovements(INITIAL_STOCK_MOVEMENTS);
       setSales(INITIAL_SALES);
+      setBookstandDutySessions(INITIAL_BOOKSTAND_DUTY_SESSIONS);
+      setBookstandExpenses(INITIAL_BOOKSTAND_EXPENSES);
       setHandbook(INITIAL_HANDBOOK);
       setAttendance(INITIAL_ATTENDANCE);
       setFinalizedAttendance(INITIAL_FINALIZED_ATTENDANCE);
       setAbsenceFollowUps(INITIAL_ABSENCE_FOLLOW_UPS);
+      setChurchLocationConfig(DEFAULT_CHURCH_LOCATION);
+      setBirthdayCelebrations(INITIAL_BIRTHDAY_CELEBRATIONS);
+      setBirthdayTemplates(INITIAL_BIRTHDAY_TEMPLATES);
+      setShareHistory(INITIAL_SHARE_HISTORY);
+      setDepartmentEvents(INITIAL_DEPARTMENT_EVENTS);
+      setChurchProgrammes(INITIAL_CHURCH_PROGRAMMES);
+      setDepartmentReminders(INITIAL_DEPARTMENT_REMINDERS);
+      setWelfareTeam(INITIAL_WELFARE_TEAM);
+      setWelfareFollowUps(INITIAL_WELFARE_FOLLOW_UPS);
+      setWelfareCases(INITIAL_WELFARE_CASES);
+      setVisitations(INITIAL_VISITATIONS);
+      setDepartmentComplaints(INITIAL_DEPARTMENT_COMPLAINTS);
+      setMonthlyReports(INITIAL_MONTHLY_REPORTS);
+      setHrdMessages(INITIAL_HRD_MESSAGES);
+      setLeadershipMeetings(INITIAL_LEADERSHIP_MEETINGS);
       alert('System data reset successfully to initial Dominion City Asaba dataset.');
     }
   };
@@ -958,6 +2015,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sales,
         handbook,
         attendance,
+        departmentEvents,
+        churchProgrammes,
+        departmentReminders,
+        welfareTeam,
+        welfareFollowUps,
+        welfareCases,
+        visitations,
+        departmentComplaints,
+        monthlyReports,
+        hrdMessages,
+        leadershipMeetings,
       },
     };
 
@@ -997,8 +2065,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (d.books) setBooks(d.books);
       if (d.stockMovements) setStockMovements(d.stockMovements);
       if (d.sales) setSales(d.sales);
+      if (d.bookstandDutySessions) setBookstandDutySessions(d.bookstandDutySessions);
+      if (d.bookstandExpenses) setBookstandExpenses(d.bookstandExpenses);
       if (d.handbook) setHandbook(d.handbook);
       if (d.attendance) setAttendance(d.attendance);
+      if (d.departmentEvents) setDepartmentEvents(d.departmentEvents);
+      if (d.churchProgrammes) setChurchProgrammes(d.churchProgrammes);
+      if (d.departmentReminders) setDepartmentReminders(d.departmentReminders);
+      if (d.welfareTeam) setWelfareTeam(d.welfareTeam);
+      if (d.welfareFollowUps) setWelfareFollowUps(d.welfareFollowUps);
+      if (d.welfareCases) setWelfareCases(d.welfareCases);
+      if (d.visitations) setVisitations(d.visitations);
+      if (d.departmentComplaints) setDepartmentComplaints(d.departmentComplaints);
+      if (d.monthlyReports) setMonthlyReports(d.monthlyReports);
+      if (d.hrdMessages) setHrdMessages(d.hrdMessages);
+      if (d.leadershipMeetings) setLeadershipMeetings(d.leadershipMeetings);
 
       alert('Backup restored successfully!');
       return true;
@@ -1028,6 +2109,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         books,
         stockMovements,
         sales,
+        bookstandDutySessions,
+        bookstandExpenses,
+        bookstandActivities,
+        bookstandComplaints,
         handbook,
         attendance,
         finalizedAttendance,
@@ -1040,6 +2125,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addLostItem,
         updateLostItem,
         claimLostItem,
+        returnLostItem,
+        deleteLostItem,
 
         addAnnouncement,
         updateAnnouncement,
@@ -1087,6 +2174,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recordBookSale,
         recordDebtPayment,
         addStockMovement,
+        startBookstandDutySession,
+        endBookstandDutySession,
+        addBookstandExpense,
+        deleteBookstandExpense,
+        addBookstandActivity,
+        addBookstandComplaint,
+        updateBookstandComplaintStatus,
+        addBookstandComplaintComment,
 
         reportCategories,
         addReportCategory,
@@ -1104,10 +2199,87 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addAttendanceRecord,
         deleteAttendanceRecord,
         updateAttendanceRecord,
+        clockOutAttendanceRecord,
         finalizeAttendance,
         reopenAttendance,
         addAbsenceFollowUp,
         updateAbsenceFollowUp,
+        churchLocationConfig,
+        updateChurchLocationConfig,
+
+        // Birthday Customisation
+        birthdayCelebrations,
+        birthdayTemplates,
+        saveBirthdayCelebration,
+        updateBirthdayCelebration,
+        deleteBirthdayCelebration,
+        saveBirthdayTemplate,
+        deleteBirthdayTemplate,
+
+        // Global Sharing
+        shareHistory,
+        addShareHistoryEntry,
+        updateShareHistoryStatus,
+        deleteShareHistoryEntry,
+
+        // Secretary Coordination & Events Management
+        departmentEvents,
+        addDepartmentEvent,
+        updateDepartmentEvent,
+        deleteDepartmentEvent,
+        churchProgrammes,
+        addChurchProgramme,
+        updateChurchProgramme,
+        deleteChurchProgramme,
+        departmentReminders,
+        addDepartmentReminder,
+        updateDepartmentReminder,
+        toggleReminderCompletion,
+        deleteDepartmentReminder,
+
+        // Dedicated Welfare Department
+        welfareTeam,
+        addWelfareTeamMember,
+        updateWelfareTeamMember,
+        removeWelfareTeamMember,
+        welfareFollowUps,
+        recordWelfareFollowUp,
+        updateWelfareFollowUp,
+        welfareCases,
+        addWelfareCase,
+        updateWelfareCase,
+        escalateWelfareCaseToHOD,
+        respondToWelfareEscalation,
+        visitations,
+        addVisitationSchedule,
+        updateVisitationSchedule,
+        completeVisitation,
+
+        // Central Complaints & Escalations
+        departmentComplaints,
+        submitDepartmentComplaint,
+        updateComplaintStatus,
+        addHODComplaintComment,
+
+        // Coordinated Unit Monthly Reports
+        monthlyReports,
+        saveMonthlyReport,
+        submitMonthlyReport,
+        reviewMonthlyReport,
+
+        // HRD Office & Departmental Messages
+        hrdMessages,
+        submitHRDMessage,
+        updateHRDMessageStatus,
+        addHRDMessageResponse,
+        assignHRDMessage,
+
+        // Leadership Meetings & Monthly Assemblies (HRD Office)
+        leadershipMeetings,
+        addLeadershipMeeting,
+        updateLeadershipMeeting,
+        deleteLeadershipMeeting,
+        updateActionPointStatus,
 
         resetToInitialData,
         exportAllDataAsJSON,

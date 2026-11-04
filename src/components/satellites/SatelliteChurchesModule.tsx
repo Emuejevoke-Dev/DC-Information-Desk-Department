@@ -159,7 +159,7 @@ export const SatelliteChurchesModule: React.FC = () => {
       </div>
 
       {/* Search */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+      <div className="bg-white dark:bg-[#0E172B] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="relative w-full max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
@@ -167,7 +167,7 @@ export const SatelliteChurchesModule: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search satellite name, pastor, venue, or neighborhood..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-blue-600 font-medium"
           />
         </div>
       </div>
@@ -254,14 +254,14 @@ export const SatelliteChurchesModule: React.FC = () => {
       {/* Add / Edit Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {editingSat ? 'Edit Satellite Branch' : 'Register Satellite Church'}
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -269,7 +269,7 @@ export const SatelliteChurchesModule: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Satellite Church Name *
                 </label>
                 <input
@@ -278,13 +278,13 @@ export const SatelliteChurchesModule: React.FC = () => {
                   placeholder="e.g. Dominion City Okpanam Satellite"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Neighborhood / Town *
                   </label>
                   <input
@@ -293,17 +293,17 @@ export const SatelliteChurchesModule: React.FC = () => {
                     placeholder="e.g. Okpanam, Ibusa, Ogwashi..."
                     value={formData.neighborhood}
                     onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Status</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) =>
                       setFormData({ ...formData, status: e.target.value as 'Active' | 'Inactive' })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 cursor-pointer"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -313,7 +313,7 @@ export const SatelliteChurchesModule: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Resident Pastor *</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Resident Pastor *</label>
                   <input
                     type="text"
                     required
@@ -322,37 +322,37 @@ export const SatelliteChurchesModule: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, residentPastor: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Pastor Phone *</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Pastor Phone *</label>
                   <input
                     type="tel"
                     required
                     placeholder="+234..."
                     value={formData.pastorPhone}
                     onChange={(e) => setFormData({ ...formData, pastorPhone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Meeting Venue *</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Meeting Venue *</label>
                 <input
                   type="text"
                   required
                   placeholder="Plot / Street / Hall details..."
                   value={formData.venue}
                   onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Sunday Service Times
                   </label>
                   <input
@@ -361,11 +361,11 @@ export const SatelliteChurchesModule: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, sundayServiceTimes: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Midweek Service Times
                   </label>
                   <input
@@ -374,13 +374,13 @@ export const SatelliteChurchesModule: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, midweekServiceTimes: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Directions & Landmarks
                 </label>
                 <textarea
@@ -388,11 +388,11 @@ export const SatelliteChurchesModule: React.FC = () => {
                   value={formData.directions}
                   onChange={(e) => setFormData({ ...formData, directions: e.target.value })}
                   placeholder="e.g. Opposite St. Augustine College, on main road..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}

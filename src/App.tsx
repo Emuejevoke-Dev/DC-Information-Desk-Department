@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext';
 
 // Authentication
 import { SignInPage } from './components/auth/SignInPage';
+import { OperationalRoleModal } from './components/auth/OperationalRoleModal';
 
 // Components
 import { Header } from './components/common/Header';
@@ -21,6 +22,11 @@ import { FinanceDashboard } from './components/dashboard/FinanceDashboard';
 import { BookstandDashboard } from './components/dashboard/BookstandDashboard';
 import { SecretaryDashboard } from './components/dashboard/SecretaryDashboard';
 import { UniformLeaderDashboard } from './components/dresscode/UniformLeaderDashboard';
+import { WelfareDashboard } from './components/welfare/WelfareDashboard';
+import { CentralComplaintsModule } from './components/reports/CentralComplaintsModule';
+import { DepartmentMonthlyReportsHub } from './components/reports/DepartmentMonthlyReportsHub';
+import { HRDOfficeDashboard } from './components/hrd/HRDOfficeDashboard';
+import { ReportToHRDModal } from './components/hrd/ReportToHRDModal';
 
 // Operational Modules
 import { CellFellowshipSatelliteDirectory } from './components/cells/CellFellowshipSatelliteDirectory';
@@ -44,13 +50,14 @@ import { ShieldCheck, ArrowLeft, Crown } from 'lucide-react';
 
 const TAB_TITLES: Record<string, string> = {
   dashboard: 'Home — Dominion City Information Desk',
-  directory: 'CELL FELLOWSHIP & SATELLITE CHURCH DIRECTORY',
-  kiosk: 'CELL FELLOWSHIP & SATELLITE CHURCH DIRECTORY',
+  'hrd-office': 'HRD Office — Executive Leadership & Oversight Suite',
+  directory: 'CELL FELLOWSHIP & SATELLITE CHURCH FOLDERS',
+  kiosk: 'CELL FELLOWSHIP & SATELLITE CHURCH FOLDERS',
   'finance-workspace': 'Financial Officer Dedicated Workspace',
   'bookstand-workspace': 'Bookstand Officer Dedicated Workspace',
   'secretary-workspace': 'Secretary & Administrative Workspace',
   'uniform-workspace': 'Uniform Leader Dedicated Workspace',
-  members: 'Department Member Directory',
+  members: 'Members Folder',
   birthdays: 'Birthday Calendar & Reminders',
   'lost-found': 'Lost & Found Custodial Register',
   announcements: 'News, Events & Noticeboard',
@@ -64,8 +71,35 @@ const TAB_TITLES: Record<string, string> = {
   reports: 'Service Reports & Department Documentation',
   collections: 'Custom Information Collection & Form Builder',
   finances: 'Financial Management & Budget Analytics',
-  bookstand: 'Book Stand',
+  bookstand: 'Book Stand — Church Literature Catalogue',
   backup: 'Data Persistence, Cloud Sync & Safeguards',
+};
+
+const TAB_MOBILE_TITLES: Record<string, string> = {
+  dashboard: 'Home',
+  'hrd-office': 'HRD Office',
+  directory: 'Cell & Satellite Folders',
+  kiosk: 'Cell & Satellite Folders',
+  'finance-workspace': 'Finance Workspace',
+  'bookstand-workspace': 'Book Officer Workspace',
+  'secretary-workspace': 'Secretary Workspace',
+  'uniform-workspace': 'Uniform Workspace',
+  members: 'Members Folder',
+  birthdays: 'Birthdays',
+  'lost-found': 'Lost & Found',
+  announcements: 'Noticeboard',
+  cells: 'Cell Directory',
+  satellites: 'Satellite Directory',
+  handbook: 'Church Handbook',
+  attendance: 'Attendance & Clock-In',
+  'dress-code': 'Sunday Dress Code',
+  roster: 'Duty Roster',
+  meetings: 'Meetings & Prayer',
+  reports: 'Service Reports',
+  collections: 'Custom Forms',
+  finances: 'Financial Records',
+  bookstand: 'Book Stand',
+  backup: 'Cloud Data & Sync',
 };
 
 const MainLayout: React.FC = () => {
@@ -74,6 +108,8 @@ const MainLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isOperationalModalOpen, setIsOperationalModalOpen] = useState(false);
+  const [isReportToHRDModalOpen, setIsReportToHRDModalOpen] = useState(false);
 
   const {
     currentUser,
@@ -95,18 +131,72 @@ const MainLayout: React.FC = () => {
   const renderActiveModule = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <MainDashboard onNavigate={(tab) => setActiveTab(tab)} />;
+        return (
+          <MainDashboard
+            onNavigate={(tab) => setActiveTab(tab)}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
+      case 'hrd-office':
+        return (
+          <HRDOfficeDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+          />
+        );
       case 'directory':
       case 'kiosk':
         return <CellFellowshipSatelliteDirectory />;
       case 'finance-workspace':
-        return <FinanceDashboard onReturnToGeneral={() => setActiveTab('dashboard')} />;
+        return (
+          <FinanceDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
       case 'bookstand-workspace':
-        return <BookstandDashboard onReturnToGeneral={() => setActiveTab('dashboard')} />;
+        return (
+          <BookstandDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onNavigateToFullModule={() => setActiveTab('bookstand')}
+            onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+            onNavigateToMemberStand={() => setActiveTab('bookstand')}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
       case 'secretary-workspace':
-        return <SecretaryDashboard onReturnToGeneral={() => setActiveTab('dashboard')} onNavigate={(tab) => setActiveTab(tab)} />;
+        return (
+          <SecretaryDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onNavigate={(tab) => setActiveTab(tab)}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
       case 'uniform-workspace':
-        return <UniformLeaderDashboard onReturnToGeneral={() => setActiveTab('dashboard')} onNavigateToRoster={() => setActiveTab('roster')} />;
+        return (
+          <UniformLeaderDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onNavigateToRoster={() => setActiveTab('roster')}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
+      case 'welfare-workspace':
+        return (
+          <WelfareDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onNavigateToMembers={() => setActiveTab('members')}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
+      case 'central-complaints':
+      case 'monthly-reports-hub':
+        // Reorganized: redirect directly into HRD Office
+        return (
+          <HRDOfficeDashboard
+            onReturnToGeneral={() => setActiveTab('dashboard')}
+            onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+          />
+        );
       case 'members':
         return <MemberDirectoryModule />;
       case 'birthdays':
@@ -135,45 +225,58 @@ const MainLayout: React.FC = () => {
       case 'meetings':
         return <MeetingsModule />;
       case 'reports':
-        return <ServiceReportsModule />;
+        return (
+          <ServiceReportsModule
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
       case 'collections':
         return <InformationCollectionModule />;
       case 'finances':
         return <FinanceModule />;
       case 'bookstand':
-        return <BookstandModule />;
+        return (
+          <BookstandModule
+            onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+            onNavigateToOfficerDesk={() => setActiveTab('bookstand-workspace')}
+          />
+        );
       case 'backup':
         return <DataManagementModal />;
       default:
-        return <MainDashboard onNavigate={(tab) => setActiveTab(tab)} />;
+        return (
+          <MainDashboard
+            onNavigate={(tab) => setActiveTab(tab)}
+            onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
+          />
+        );
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070D18] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      {/* Active Operational Role Top Strip */}
+      {/* Active Operational Role Top Strip - Mobile responsive without horizontal overflow */}
       {isOperationalRoleActive && activeRoleDetails && (
-        <div className="bg-amber-400 text-slate-950 font-semibold px-4 py-1.5 flex items-center justify-between text-xs border-b border-amber-500 shadow-xs z-40 animate-in slide-in-from-top-1">
-          <div className="flex items-center gap-2">
+        <div className="bg-amber-400 text-slate-950 font-semibold px-3 sm:px-4 py-1.5 flex items-center justify-between text-xs border-b border-amber-500 shadow-xs z-40 animate-in slide-in-from-top-1 gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             {activeOperationalRole === 'hod' ? (
-              <Crown className="w-4 h-4 text-slate-950" />
+              <Crown className="w-4 h-4 text-slate-950 shrink-0" />
             ) : (
-              <ShieldCheck className="w-4 h-4 text-slate-950" />
+              <ShieldCheck className="w-4 h-4 text-slate-950 shrink-0" />
             )}
-            <span>
-              Operating with Privileges: <strong>{activeRoleDetails.title}</strong>
-            </span>
-            <span className="hidden sm:inline text-slate-800 text-[11px]">
-              • Authenticated Member: {currentUser.name}
-            </span>
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="font-bold truncate text-[11px] sm:text-xs text-slate-950">
+                Active Role: {activeRoleDetails.title}
+              </span>
+            </div>
           </div>
           <button
             onClick={exitOperationalRole}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-[11px] font-bold transition-colors cursor-pointer shadow-xs"
-            title="Return to general department member view"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer shadow-xs shrink-0"
+            title="Switch back to Member Mode"
           >
             <ArrowLeft className="w-3 h-3" />
-            Exit Operational Role
+            <span>Switch to Member Mode</span>
           </button>
         </div>
       )}
@@ -186,6 +289,8 @@ const MainLayout: React.FC = () => {
         setCollapsed={setSidebarCollapsed}
         mobileOpen={mobileMenuOpen}
         setMobileOpen={setMobileMenuOpen}
+        onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+        onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
       />
 
       {/* Main App Content Area */}
@@ -197,15 +302,18 @@ const MainLayout: React.FC = () => {
         {/* Header Bar */}
         <Header
           activeTabTitle={TAB_TITLES[activeTab] || 'Information Desk Portal'}
+          mobileTitle={TAB_MOBILE_TITLES[activeTab] || TAB_TITLES[activeTab]}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}
           onNavigateToDirectory={() => setActiveTab('directory')}
           onQuickPrint={() => window.print()}
           onNavigate={(tab) => setActiveTab(tab)}
+          onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+          onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
         />
 
         {/* Dynamic Page Body */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-2.5 xs:p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {renderActiveModule()}
         </main>
       </div>
@@ -231,6 +339,23 @@ const MainLayout: React.FC = () => {
       <MyProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+        onOpenRoleModal={() => setIsOperationalModalOpen(true)}
+      />
+
+      {/* Centralized Operational Department Role Switcher Modal */}
+      <OperationalRoleModal
+        isOpen={isOperationalModalOpen}
+        onClose={() => setIsOperationalModalOpen(false)}
+        onNavigateToWorkspace={(tab) => {
+          setActiveTab(tab);
+          setIsOperationalModalOpen(false);
+        }}
+      />
+
+      {/* Direct Line: REPORT TO HRD Leadership Submission Modal */}
+      <ReportToHRDModal
+        isOpen={isReportToHRDModalOpen}
+        onClose={() => setIsReportToHRDModalOpen(false)}
       />
 
       {/* Notification Drawer */}

@@ -19,26 +19,41 @@ import {
   ShoppingBag,
   AlertCircle,
   FileSpreadsheet,
+  Share2,
+  FileText,
+  Printer,
+  Send,
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
-import { FinancialTransaction, TransactionCategory } from '../../types/models';
+import { FinancialTransaction, TransactionCategory, DepartmentMonthlyReport } from '../../types/models';
+import { ShareModal } from '../common/ShareModal';
 
 interface FinanceDashboardProps {
   onReturnToGeneral: () => void;
   onNavigateToFullModule?: () => void;
+  onOpenReportToHRD?: () => void;
 }
 
 export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
   onReturnToGeneral,
   onNavigateToFullModule,
+  onOpenReportToHRD,
 }) => {
   const { currentUser, canManageFinances } = useAuth();
-  const { transactions, budgetNeeds, sales, addTransaction } = useData();
+  const {
+    transactions,
+    budgetNeeds,
+    sales,
+    addTransaction,
+    monthlyReports,
+    saveMonthlyReport,
+  } = useData();
 
   const [dateFilter, setDateFilter] = useState<'1m' | '2m' | '6m' | '12m' | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // New Transaction Form State
   const [newTx, setNewTx] = useState<{
@@ -130,6 +145,94 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     [sales]
   );
 
+  const [activeTab, setActiveTab] = useState<'ledger' | 'monthly-report'>('ledger');
+  const [selectedReportMonth, setSelectedReportMonth] = useState('2026-10');
+  const [reportActivities, setReportActivities] = useState('');
+  const [reportWorkCompleted, setReportWorkCompleted] = useState('');
+  const [reportChallenges, setReportChallenges] = useState('');
+  const [reportComplaints, setReportComplaints] = useState('');
+  const [reportRecommendations, setReportRecommendations] = useState('');
+  const [reportOutstanding, setReportOutstanding] = useState('');
+  const [reportNextMonth, setReportNextMonth] = useState('');
+  const [reportSavedBanner, setReportSavedBanner] = useState<string | null>(null);
+
+  const currentFinanceReport = useMemo(() => {
+    return monthlyReports.find(
+      (r) => r.departmentUnit === 'Finance' && r.reportingMonth === selectedReportMonth
+    );
+  }, [monthlyReports, selectedReportMonth]);
+
+  React.useEffect(() => {
+    if (currentFinanceReport) {
+      setReportActivities(currentFinanceReport.activitiesCarriedOut || '');
+      setReportWorkCompleted(currentFinanceReport.workCompleted || '');
+      setReportChallenges(currentFinanceReport.challengesEncountered || '');
+      setReportComplaints(currentFinanceReport.complaintsOrIssues || '');
+      setReportRecommendations(currentFinanceReport.recommendations || '');
+      setReportOutstanding(currentFinanceReport.outstandingResponsibilities || '');
+      setReportNextMonth(currentFinanceReport.activitiesPlannedNextMonth || '');
+    } else {
+      setReportActivities(
+        'Recorded departmental dues, maintained audited cash inflow/outflow registers, audited Bookstand cash receipts, and balanced ledger accounts.'
+      );
+      setReportWorkCompleted(
+        'Processed monthly departmental member dues, verified petty cash disbursements against vouchers, and reconciled bank balances.'
+      );
+      setReportChallenges(
+        'Delayed dues remittance by some members; manual receipt verification for irregular transfer narratives.'
+      );
+      setReportComplaints(
+        'Need for a standardized receipt book for off-line dues collection at the desk.'
+      );
+      setReportRecommendations(
+        'Implement automated dues reminders via WhatsApp and introduce a departmental QR code payment placard.'
+      );
+      setReportOutstanding(
+        'Follow-up with 8 outstanding member monthly pledges.'
+      );
+      setReportNextMonth(
+        'Prepare the end-of-year comprehensive departmental financial statement and conduct annual treasury audit.'
+      );
+    }
+  }, [currentFinanceReport, selectedReportMonth]);
+
+  const handleSaveMonthlyReport = (submit: boolean = false) => {
+    const reportPayload: Omit<DepartmentMonthlyReport, 'id' | 'createdAt' | 'updatedAt'> = {
+      departmentUnit: 'Finance',
+      reportingMonth: selectedReportMonth,
+      submittedBy: currentUser?.name || 'Financial Officer',
+      submittedByRole: 'Head of Finance & Treasury',
+      submissionDate: new Date().toISOString().split('T')[0],
+      status: submit ? 'Submitted' : 'Draft',
+      activitiesCarriedOut: reportActivities,
+      workCompleted: reportWorkCompleted,
+      importantStatistics: {
+        'Total Inflow (Income)': formatNaira(totalIncome),
+        'Total Outflow (Expenses)': formatNaira(totalExpense),
+        'Net Operational Balance': formatNaira(netBalance),
+        'Recorded Ledger Entries': transactions.length,
+        'Active Budget Needs': budgetNeeds.length,
+      },
+      challengesEncountered: reportChallenges,
+      complaintsOrIssues: reportComplaints,
+      recommendations: reportRecommendations,
+      outstandingResponsibilities: reportOutstanding,
+      activitiesPlannedNextMonth: reportNextMonth,
+    };
+
+    saveMonthlyReport({
+      ...(currentFinanceReport?.id ? { id: currentFinanceReport.id } : {}),
+      ...reportPayload,
+    });
+
+    setReportSavedBanner(
+      submit
+        ? `✓ Finance Monthly Report for ${selectedReportMonth} submitted successfully to the HOD!`
+        : `✓ Finance Monthly Report for ${selectedReportMonth} saved as Draft!`
+    );
+    setTimeout(() => setReportSavedBanner(null), 4000);
+  };
+
   const handleCreateTx = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTx.amount || parseFloat(newTx.amount) <= 0 || !newTx.description) {
@@ -183,10 +286,10 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
         <div>
           <button
             onClick={onReturnToGeneral}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-200 text-xs font-bold mb-2.5 transition-colors cursor-pointer border border-white/10"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-200 text-xs font-bold mb-2.5 transition-colors cursor-pointer border border-white/10"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Return to General Department Dashboard
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+            <span><span className="hidden sm:inline">Return to </span>General Dashboard</span>
           </button>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight">
@@ -218,9 +321,63 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             <Download className="w-3.5 h-3.5 text-blue-300" />
             Export CSV
           </button>
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs border border-emerald-400/40 transition-all cursor-pointer shadow-md"
+            title="Preview, generate PDF and share monthly financial report via WhatsApp"
+          >
+            <Share2 className="w-3.5 h-3.5 text-emerald-200" />
+            Share Report
+          </button>
+          <button
+            onClick={() => setActiveTab('monthly-report')}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold text-xs transition-all cursor-pointer shadow-md"
+            title="Draft, verify, and submit monthly financial report to HOD"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-950" />
+            Monthly Report to HOD
+          </button>
+          {onOpenReportToHRD && (
+            <button
+              onClick={onOpenReportToHRD}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs border border-amber-300 transition-all cursor-pointer shadow-md"
+              title="Escalate financial budget discrepancy or treasury report to HRD"
+            >
+              <Send className="w-3.5 h-3.5 text-slate-950" />
+              <span>REPORT TO HRD</span>
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Main View Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className={`pb-3 px-4 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'ledger'
+              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Wallet className="w-4 h-4" />
+          <span>Audited Financial Ledger & Audit</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('monthly-report')}
+          className={`pb-3 px-4 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'monthly-report'
+              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Monthly Unit Report (HOD Submission)</span>
+        </button>
+      </div>
+
+      {activeTab === 'ledger' && (
+        <div className="space-y-6 animate-in fade-in duration-150">
       {/* Date Filter Bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
@@ -428,14 +585,14 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 placeholder="Search description or receipt..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 font-medium"
               />
             </div>
 
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="all">All Categories</option>
               <option value="Member Monthly Dues">Member Monthly Dues</option>
@@ -520,18 +677,236 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
           </table>
         </div>
       </div>
+      </div>
+      )}
+
+      {/* MONTHLY REPORT TAB */}
+      {activeTab === 'monthly-report' && (
+        <div className="space-y-5 animate-in fade-in duration-150">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Department Finance Monthly Operating Report
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Official 9-part monthly financial & treasury management report submitted directly to the Head of Department (HOD).
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-400">Reporting Month:</label>
+              <select
+                value={selectedReportMonth}
+                onChange={(e) => setSelectedReportMonth(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+              >
+                <option value="2026-11">November 2026</option>
+                <option value="2026-10">October 2026</option>
+                <option value="2026-09">September 2026</option>
+              </select>
+            </div>
+          </div>
+
+          {reportSavedBanner && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+              {reportSavedBanner}
+            </div>
+          )}
+
+          {currentFinanceReport && (
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Submission Status:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md font-bold uppercase text-[10px] ${
+                    currentFinanceReport.status === 'Submitted'
+                      ? 'bg-blue-500 text-white'
+                      : currentFinanceReport.status === 'Reviewed'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-amber-500 text-slate-950'
+                  }`}
+                >
+                  {currentFinanceReport.status}
+                </span>
+                {currentFinanceReport.reviewedBy && (
+                  <span className="text-slate-400">
+                    • Reviewed by <strong className="text-white">{currentFinanceReport.reviewedBy}</strong>
+                  </span>
+                )}
+              </div>
+              {currentFinanceReport.hodReviewNotes && (
+                <div className="text-amber-200 italic text-[11px] bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                  HOD Remark: "{currentFinanceReport.hodReviewNotes}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Unit Statistics Summary Card */}
+          <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300 block">
+              3. Important Unit Statistics (Auto-Calculated for {selectedReportMonth})
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <span className="text-[10px] text-slate-400 block">Total Department Inflow</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-black">{formatNaira(totalIncome)}</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <span className="text-[10px] text-slate-400 block">Total Department Outflow</span>
+                <strong className="text-rose-600 dark:text-rose-400 font-black">{formatNaira(totalExpense)}</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <span className="text-[10px] text-slate-400 block">Net Operational Balance</span>
+                <strong className="text-blue-600 dark:text-blue-400 font-black">{formatNaira(netBalance)}</strong>
+              </div>
+              <div className="bg-white dark:bg-[#0E172B] p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <span className="text-[10px] text-slate-400 block">Ledger Records Audited</span>
+                <strong className="text-slate-900 dark:text-white font-black">{transactions.length} Entries</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* 9-Part Narrative Form */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  1. Major Activities Carried Out *
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportActivities}
+                  onChange={(e) => setReportActivities(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Dues collection, receipt issuances, expense disbursements..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  2. Work Completed & Milestones *
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportWorkCompleted}
+                  onChange={(e) => setReportWorkCompleted(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Ledger reconciliations, bookstand remittance audit, budget records..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  4. Operational Challenges Encountered
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportChallenges}
+                  onChange={(e) => setReportChallenges(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Outstanding dues recovery, delays in transfer narrative verification..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  5. Complaints, Observations & Issues
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportComplaints}
+                  onChange={(e) => setReportComplaints(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Member payment inquiries, petty cash voucher replenishment delays..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  6. Strategic Recommendations
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportRecommendations}
+                  onChange={(e) => setReportRecommendations(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Treasury automation, procurement of desk payment QR stand..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  7. Outstanding Responsibilities & Follow-Up
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportOutstanding}
+                  onChange={(e) => setReportOutstanding(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Following up on remaining dues, reconciling year-end balances..."
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  8. Activities Planned for Next Month
+                </label>
+                <textarea
+                  rows={2}
+                  value={reportNextMonth}
+                  onChange={(e) => setReportNextMonth(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                  placeholder="Annual departmental financial statement, comprehensive treasury report..."
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[11px] text-slate-500">
+                Reporting Officer: <strong>{currentUser?.name || 'Financial Officer'}</strong> • Date: {new Date().toISOString().split('T')[0]}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn-compact bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold h-9 px-3 text-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Report</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveMonthlyReport(false)}
+                  className="btn-compact bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-900 dark:text-white font-bold h-9 px-3.5 text-xs cursor-pointer"
+                >
+                  Save Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveMonthlyReport(true)}
+                  className="btn-compact bg-blue-600 hover:bg-blue-500 text-white font-bold h-9 px-4 text-xs cursor-pointer flex items-center gap-1.5 shadow-md"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Submit Report to HOD</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Record New Transaction Modal */}
       {isNewTxModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Record New Financial Transaction
               </h3>
               <button
                 onClick={() => setIsNewTxModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 ✕
               </button>
@@ -540,7 +915,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             <form onSubmit={handleCreateTx} className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Date *
                   </label>
                   <input
@@ -548,12 +923,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     required
                     value={newTx.date}
                     onChange={(e) => setNewTx({ ...newTx, date: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Transaction Type *
                   </label>
                   <select
@@ -561,7 +936,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     onChange={(e) =>
                       setNewTx({ ...newTx, type: e.target.value as 'Income' | 'Expense' })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value="Income">Income (+)</option>
                     <option value="Expense">Expense (-)</option>
@@ -571,7 +946,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Category *
                   </label>
                   <select
@@ -579,7 +954,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     onChange={(e) =>
                       setNewTx({ ...newTx, category: e.target.value as TransactionCategory })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
                   >
                     <option value="Member Monthly Dues">Member Monthly Dues</option>
                     <option value="Love Offering & Donations">Love Offering & Donations</option>
@@ -594,7 +969,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Amount in Naira (NGN) *
                   </label>
                   <input
@@ -605,13 +980,13 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     placeholder="e.g. 15000"
                     value={newTx.amount}
                     onChange={(e) => setNewTx({ ...newTx, amount: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Description / Purpose *
                 </label>
                 <textarea
@@ -620,13 +995,13 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                   placeholder="e.g. Purchase of 500 visitor cell orientation slips"
                   value={newTx.description}
                   onChange={(e) => setNewTx({ ...newTx, description: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Payment Method
                   </label>
                   <select
@@ -637,7 +1012,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         paymentMethod: e.target.value as any,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
                   >
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Cash">Cash</option>
@@ -647,7 +1022,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Receipt / Reference No.
                   </label>
                   <input
@@ -655,12 +1030,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     placeholder="e.g. REC-2026-088"
                     value={newTx.receiptNumber}
                     onChange={(e) => setNewTx({ ...newTx, receiptNumber: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-medium"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsNewTxModalOpen(false)}
@@ -678,6 +1053,40 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Financial Officer Monthly Report Share Modal */}
+      {isShareModalOpen && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          documentTitle={`DOMINION CITY ASABA — FINANCIAL OFFICER REPORT`}
+          documentType="Financial Report"
+          subtitle={`Department Treasury & Ledger (${dateFilter === 'all' ? 'All History' : `Past ${dateFilter.toUpperCase()}`})`}
+          documentRef={`FIN-DASH-${new Date().getFullYear()}-${dateFilter}`}
+          isConfidential={true}
+          contentLines={[
+            `Reporting Period: ${dateFilter === 'all' ? 'All Reconciled History' : `Past ${dateFilter.toUpperCase()}`}`,
+            `Total Inflows (Income): ${formatNaira(totalIncome)}`,
+            `Total Outflows (Expenditures): ${formatNaira(totalExpense)}`,
+            `Net Operating Balance: ${formatNaira(netBalance)}`,
+            `Bookstand Turnover in Period: ${formatNaira(totalBookSalesRevenue)}`,
+            `Bookstand Cash Collected: ${formatNaira(totalBookstandCashReceived)}`,
+            `Outstanding Bookstand Debtors: ${formatNaira(totalBookDebts)}`,
+            `Account Signatories: Department Head (HOD) & Financial Officer`,
+          ]}
+          tableHeaders={['Date', 'Type', 'Category', 'Description', 'Amount', 'Payment Mode']}
+          tableRows={filteredTransactions.slice(0, 15).map((t) => [
+            t.date,
+            t.type,
+            t.category,
+            t.description,
+            formatNaira(t.amount),
+            t.paymentMethod,
+          ])}
+          summaryNotes="This report is generated from the official Treasury Management System of Dominion City Asaba Information Desk Department. All transactions are backed by physical receipts and bank alerts."
+          defaultRecipientName="Department Head"
+        />
       )}
     </div>
   );

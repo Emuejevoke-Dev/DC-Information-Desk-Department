@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, OPERATIONAL_ROLES_INFO } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import {
   LayoutDashboard,
@@ -25,8 +25,14 @@ import {
   LogOut,
   ExternalLink,
   UserCheck,
+  Crown,
+  ShieldCheck,
+  HeartHandshake,
+  AlertTriangle,
+  FileCheck,
+  Send,
 } from 'lucide-react';
-import { Compass } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface SidebarProps {
@@ -36,6 +42,8 @@ interface SidebarProps {
   setCollapsed: (c: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (o: boolean) => void;
+  onOpenRoleModal?: () => void;
+  onOpenReportToHRD?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -45,17 +53,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
+  onOpenRoleModal,
+  onOpenReportToHRD,
 }) => {
   const {
     currentUser,
+    isHOD,
+    canAccessHRDOffice,
     canViewFinances,
     canViewBookstand,
+    canManageBookstand,
     canManageUniforms,
     canManageMembers,
+    canManageWelfare,
+    canSuperviseAll,
     canViewConfidentialData,
+    activeOperationalRole,
+    isOperationalRoleActive,
+    exitOperationalRole,
     logout,
   } = useAuth();
   const { members, lostItems, books, attendance } = useData();
+
+  const activeRoleDetails = activeOperationalRole ? OPERATIONAL_ROLES_INFO[activeOperationalRole] : null;
 
   // Badge counts
   const today = new Date();
@@ -95,8 +115,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: 'directory',
-          label: 'Cell & Satellite Directory',
-          icon: Compass,
+          label: 'Cell & Satellite Folders',
+          icon: FolderOpen,
           badge: 'Fast Locator',
           badgeColor: 'bg-blue-600 text-white',
           allowed: true,
@@ -104,13 +124,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'Officer Workspaces',
+      title: 'Authorized Officer Desks',
       items: [
+        {
+          id: 'hrd-office',
+          label: 'HRD Office',
+          icon: Crown,
+          badge: isHOD ? 'Executive' : 'Restricted',
+          badgeColor: isHOD ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-950/80 text-amber-300 border border-amber-700',
+          allowed: true,
+        },
         {
           id: 'finance-workspace',
           label: 'Financial Officer Desk',
           icon: Wallet,
-          badge: 'Audited',
+          badge: 'Desk',
           badgeColor: 'bg-emerald-600 text-white',
           allowed: canViewFinances,
         },
@@ -118,15 +146,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'bookstand-workspace',
           label: 'Bookstand Officer Desk',
           icon: ShoppingBag,
-          badge: lowStockCount > 0 ? `${lowStockCount} Low` : 'Active',
+          badge: lowStockCount > 0 ? `${lowStockCount} Low` : 'Desk',
           badgeColor: lowStockCount > 0 ? 'bg-rose-600 text-white animate-pulse' : 'bg-purple-600 text-white',
-          allowed: canViewBookstand,
+          allowed: canManageBookstand,
         },
         {
           id: 'secretary-workspace',
           label: 'Secretary Admin Desk',
           icon: ClipboardList,
-          badge: 'Admin',
+          badge: 'Desk',
           badgeColor: 'bg-teal-600 text-white',
           allowed: canManageMembers,
         },
@@ -134,9 +162,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'uniform-workspace',
           label: 'Uniform Leader Desk',
           icon: Shirt,
-          badge: 'Outfits',
+          badge: 'Desk',
           badgeColor: 'bg-rose-600 text-white',
           allowed: canManageUniforms,
+        },
+        {
+          id: 'welfare-workspace',
+          label: 'Welfare Coordinator Desk',
+          icon: HeartHandshake,
+          badge: 'Desk',
+          badgeColor: 'bg-pink-600 text-white',
+          allowed: canManageWelfare,
         },
       ],
     },
@@ -145,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         {
           id: 'members',
-          label: 'Member Directory',
+          label: 'Members Folder',
           icon: Users,
           badge: members.length,
           allowed: true,
@@ -250,17 +286,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: 'bookstand',
-          label: 'Book Stand',
-          icon: ShoppingBag,
-          badge: lowStockCount > 0 ? `${lowStockCount} Low` : null,
-          badgeColor: 'bg-rose-600 text-white animate-pulse',
-          allowed: canViewBookstand,
+          label: 'Book Stand Catalogue',
+          icon: BookOpen,
+          badge: 'Catalogue',
+          badgeColor: 'bg-amber-400 text-slate-950 font-bold',
+          allowed: true,
         },
       ],
     },
   ];
 
   const handleNavClick = (id: string) => {
+    if (id === 'bookstand-workspace' && !canManageBookstand) {
+      setMobileOpen(false);
+      if (onOpenRoleModal) onOpenRoleModal();
+      return;
+    }
+    if (id === 'finance-workspace' && !canViewFinances) {
+      setMobileOpen(false);
+      if (onOpenRoleModal) onOpenRoleModal();
+      return;
+    }
+    if (id === 'secretary-workspace' && !canManageMembers) {
+      setMobileOpen(false);
+      if (onOpenRoleModal) onOpenRoleModal();
+      return;
+    }
+    if (id === 'uniform-workspace' && !canManageUniforms) {
+      setMobileOpen(false);
+      if (onOpenRoleModal) onOpenRoleModal();
+      return;
+    }
+    if (id === 'welfare-workspace' && !canManageWelfare) {
+      setMobileOpen(false);
+      if (onOpenRoleModal) onOpenRoleModal();
+      return;
+    }
     setActiveTab(id);
     setMobileOpen(false);
   };
@@ -296,7 +357,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Scrollable Navigation List */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 custom-scrollbar">
           {navGroups.map((group, gIdx) => {
             const visibleItems = group.items.filter((item) => item.allowed);
             if (visibleItems.length === 0) return null;
@@ -352,8 +413,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* Footer Account Status */}
-        <div className="p-3 bg-[#061024] border-t border-[#152B52]">
+        {/* Report to HRD Prominent Action Button */}
+        {onOpenReportToHRD && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                onOpenReportToHRD();
+              }}
+              className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-950/40 border border-amber-300 cursor-pointer transition-all hover:scale-[1.02] ${
+                collapsed ? 'px-1' : 'px-3'
+              }`}
+              title="REPORT TO HRD — Direct leadership messaging, inquiries & incidents"
+            >
+              <Send className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              {!collapsed && <span className="tracking-wide">REPORT TO HRD</span>}
+            </button>
+          </div>
+        )}
+
+        {/* Footer Account Status & Prominent Mobile Log Out */}
+        <div className="p-3 bg-[#061024] border-t border-[#152B52] space-y-2">
           <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/5">
             {currentUser.avatarUrl ? (
               <img
@@ -372,18 +452,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <p className="text-[10px] text-blue-300 truncate">{currentUser.departmentRole}</p>
               </div>
             )}
-            {!collapsed && (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-2 py-1 text-slate-300 hover:text-white hover:bg-red-600/80 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                title="Log Out and end session"
-                aria-label="Log Out"
-              >
-                <LogOut className="w-3.5 h-3.5 text-red-400" />
-                <span className="text-[11px]">Log Out</span>
-              </button>
-            )}
           </div>
+
+          {/* Prominent Log Out Button on Mobile & Expanded Sidebar */}
+          {!collapsed && (
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                logout();
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-950/60 border border-red-500/50 cursor-pointer"
+              title="Log Out and end session"
+              aria-label="Log Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out of System</span>
+            </button>
+          )}
         </div>
       </aside>
     </>

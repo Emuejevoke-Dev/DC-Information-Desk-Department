@@ -15,7 +15,7 @@ export async function hashCredential(plainText: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export type SupportedOfficerRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary';
+export type SupportedOfficerRole = 'hod' | 'operations' | 'finance' | 'uniform' | 'bookstand' | 'secretary' | 'welfare';
 
 // Initial default hashes for operational officer credentials
 export const DEFAULT_OFFICER_HASHES: Record<SupportedOfficerRole, string> = {
@@ -31,6 +31,8 @@ export const DEFAULT_OFFICER_HASHES: Record<SupportedOfficerRole, string> = {
   uniform: 'ec2f4dca6fb09268686e00ca36e84860b730598718ec2db7f2ea909ce9f43063',
   // Precomputed SHA-256 of "SEC-2026"
   secretary: 'aaf76ade8cbc34ea13c5b65b6f13387835a67992d208d87a5b53a67e3c200547',
+  // Precomputed SHA-256 of "WELFARE-2026"
+  welfare: '1313b23cfe0031e117f70f2be56f14012ee8ed335221d55b6d2401b002e079c3',
 };
 
 // Storage keys
@@ -117,6 +119,7 @@ export const DEFAULT_OFFICER_ASSIGNMENTS: Record<SupportedOfficerRole, string[]>
   uniform: ['mem-2', 'usr-leader', 'leader.infodesk@dominioncityasaba.org', 'Sister Ngozi Adeleke'],
   bookstand: ['mem-5', 'usr-bookstand', 'bookstand.infodesk@dominioncityasaba.org', 'Brother Kelechi Obi'],
   secretary: ['mem-3', 'usr-secretary', 'secretary.infodesk@dominioncityasaba.org', 'Sister Blessing Ifeanyi'],
+  welfare: ['mem-welfare', 'usr-welfare', 'welfare.infodesk@dominioncityasaba.org', 'Sister Chioma Okoro'],
 };
 
 // Get current officer role assignments
@@ -421,5 +424,76 @@ export function generateSecureDeskPassword(): string {
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   return `${prefix}#${randomNum}`;
+}
+
+// -------------------------------------------------------------
+// INPUT SANITIZATION & XSS MITIGATION
+// -------------------------------------------------------------
+export function sanitizeInput(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+// -------------------------------------------------------------
+// SECURE FILE UPLOAD VALIDATION
+// -------------------------------------------------------------
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+export function validateImageFile(file: File): { isValid: boolean; error?: string } {
+  if (!file) {
+    return { isValid: false, error: 'No file selected.' };
+  }
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return {
+      isValid: false,
+      error: 'Invalid file format. Please upload a JPEG, PNG, or WebP photo.',
+    };
+  }
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return {
+      isValid: false,
+      error: `File size exceeds the 5MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose a smaller image.`,
+    };
+  }
+  return { isValid: true };
+}
+
+// -------------------------------------------------------------
+// CLIENT-SIDE RATE LIMITING HELPER (BRUTE FORCE DEFENSE)
+// -------------------------------------------------------------
+const attemptLog: Record<string, number[]> = {};
+
+export function checkRateLimit(
+  actionKey: string,
+  maxAttempts: number = 5,
+  windowMs: number = 60000
+): { isAllowed: boolean; remainingAttempts: number; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const timestamps = (attemptLog[actionKey] || []).filter((t) => now - t < windowMs);
+
+  if (timestamps.length >= maxAttempts) {
+    const oldest = timestamps[0];
+    const retryAfterSeconds = Math.ceil((oldest + windowMs - now) / 1000);
+    return {
+      isAllowed: false,
+      remainingAttempts: 0,
+      retryAfterSeconds: Math.max(1, retryAfterSeconds),
+    };
+  }
+
+  timestamps.push(now);
+  attemptLog[actionKey] = timestamps;
+
+  return {
+    isAllowed: true,
+    remainingAttempts: maxAttempts - timestamps.length,
+  };
 }
 

@@ -5,24 +5,60 @@ import { ShieldCheck, ChevronDown, Crown } from 'lucide-react';
 
 interface RoleSwitcherProps {
   onNavigateToWorkspace?: (workspaceTab: string) => void;
+  onOpenModal?: () => void;
 }
 
-export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ onNavigateToWorkspace }) => {
+export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
+  onNavigateToWorkspace,
+  onOpenModal,
+}) => {
   const { activeOperationalRole, isOperationalRoleActive } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+
+  const isModalOpen = onOpenModal ? false : internalModalOpen;
+  const handleOpen = () => {
+    if (onOpenModal) {
+      onOpenModal();
+    } else {
+      setInternalModalOpen(true);
+    }
+  };
 
   const activeRoleDetails = activeOperationalRole ? OPERATIONAL_ROLES_INFO[activeOperationalRole] : null;
+
+  // Short label for mobile display
+  const getMobileRoleLabel = () => {
+    if (!activeOperationalRole) return 'Roles';
+    switch (activeOperationalRole) {
+      case 'hod':
+        return 'HOD';
+      case 'operations':
+        return 'Ops';
+      case 'finance':
+        return 'Finance';
+      case 'uniform':
+        return 'Uniform';
+      case 'bookstand':
+        return 'Book Officer';
+      case 'secretary':
+        return 'Sec';
+      case 'welfare':
+        return 'Welfare';
+      default:
+        return 'Role';
+    }
+  };
 
   return (
     <>
       <button
-        onClick={() => setIsModalOpen(true)}
-        className={`btn-compact transition-all cursor-pointer ${
+        onClick={handleOpen}
+        className={`h-8 px-2 sm:px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shrink-0 ${
           isOperationalRoleActive
             ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border border-amber-300/80 hover:from-amber-300 hover:to-amber-400 glow-amber'
             : 'bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-blue-400/50 glow-blue-hover'
         }`}
-        title="Switch Operational Role (HOD, Finance, Uniform Leader, Book Stand, Department Secretary)"
+        title="Switch Operational Department Role (HOD, Operations, Finance, Uniform, Book Stand, Secretary)"
         aria-label="Switch Operational Role"
       >
         {activeOperationalRole === 'hod' ? (
@@ -34,21 +70,28 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ onNavigateToWorkspac
             }`}
           />
         )}
-        <span className="font-bold truncate max-w-[140px] sm:max-w-none">
-          {activeRoleDetails ? activeRoleDetails.title : 'Switch Operational Role'}
+        {/* Compact label for small mobile screens */}
+        <span className="sm:hidden font-black tracking-tight text-[11px]">
+          {getMobileRoleLabel()}
+        </span>
+        {/* Full label for sm and larger viewports */}
+        <span className="hidden sm:inline font-bold truncate max-w-[130px] md:max-w-none">
+          {activeRoleDetails ? activeRoleDetails.title : 'Switch Role'}
         </span>
         <ChevronDown
           className={`w-3 h-3 opacity-80 shrink-0 transition-transform ${
-            isModalOpen ? 'rotate-180' : ''
+            internalModalOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
-      <OperationalRoleModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onNavigateToWorkspace={onNavigateToWorkspace}
-      />
+      {!onOpenModal && (
+        <OperationalRoleModal
+          isOpen={internalModalOpen}
+          onClose={() => setInternalModalOpen(false)}
+          onNavigateToWorkspace={onNavigateToWorkspace}
+        />
+      )}
     </>
   );
 };

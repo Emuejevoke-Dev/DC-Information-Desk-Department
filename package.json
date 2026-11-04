@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
+    "core-js": "^3.51.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.62.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

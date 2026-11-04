@@ -8,6 +8,7 @@ import {
   DepartmentBudgetNeed,
 } from '../../types/models';
 import { PrintModal } from '../common/PrintModal';
+import { ShareModal } from '../common/ShareModal';
 import { exportToCSV } from '../../utils/exportUtils';
 import { formatNaira, formatCompactNaira } from '../../utils/formatters';
 import { formatDate } from '../../utils/dateUtils';
@@ -16,6 +17,7 @@ import {
   Plus,
   Search,
   Printer,
+  Share2,
   Download,
   TrendingUp,
   TrendingDown,
@@ -52,6 +54,7 @@ export const FinanceModule: React.FC = () => {
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
   const [isAddBudgetModalOpen, setIsAddBudgetModalOpen] = useState(false);
   const [isPrintStatementOpen, setIsPrintStatementOpen] = useState(false);
+  const [isDirectShareOpen, setIsDirectShareOpen] = useState(false);
 
   // Passcode unlock state
   const [passcode, setPasscode] = useState('');
@@ -174,7 +177,7 @@ export const FinanceModule: React.FC = () => {
         </div>
 
         <form onSubmit={handlePasscodeUnlock} className="space-y-3 pt-2 text-left">
-          <label className="block text-xs font-bold text-slate-700">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
             Enter Financial Authorization Passcode:
           </label>
           <div className="relative">
@@ -187,7 +190,7 @@ export const FinanceModule: React.FC = () => {
                 setPasscodeError(null);
               }}
               placeholder="Enter security passcode (e.g. dominion2024 or 1234)..."
-              className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-blue-600 font-mono"
+              className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:outline-blue-600 font-mono"
             />
           </div>
           {passcodeError && (
@@ -322,6 +325,14 @@ export const FinanceModule: React.FC = () => {
               </button>
             </>
           )}
+          <button
+            onClick={() => setIsDirectShareOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-colors cursor-pointer shadow-xs"
+            title="Share financial report via WhatsApp & PDF"
+          >
+            <Share2 className="w-4 h-4" />
+            Share Report
+          </button>
           <button
             onClick={() => setIsPrintStatementOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer"
@@ -656,14 +667,14 @@ export const FinanceModule: React.FC = () => {
       {/* Record Transaction Modal */}
       {isAddTxModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Record Financial Transaction
               </h3>
               <button
                 onClick={() => setIsAddTxModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -672,7 +683,7 @@ export const FinanceModule: React.FC = () => {
             <form onSubmit={handleCreateTx} className="mt-4 space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Transaction Type *
                   </label>
                   <select
@@ -680,27 +691,27 @@ export const FinanceModule: React.FC = () => {
                     onChange={(e) =>
                       setTxForm({ ...txForm, type: e.target.value as TransactionType })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600 font-bold cursor-pointer"
                   >
                     <option value="Income">Income (Revenue / Dues)</option>
                     <option value="Expense">Expense (Payment / Disbursement)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Date *</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Date *</label>
                   <input
                     type="date"
                     required
                     value={txForm.date}
                     onChange={(e) => setTxForm({ ...txForm, date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Category *</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Category *</label>
                   <select
                     value={txForm.category}
                     onChange={(e) =>
@@ -709,7 +720,7 @@ export const FinanceModule: React.FC = () => {
                         category: e.target.value as TransactionCategory,
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600 cursor-pointer"
                   >
                     {categories.map((c) => (
                       <option key={c} value={c}>
@@ -719,7 +730,7 @@ export const FinanceModule: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Amount in Nigerian Naira (₦) *
                   </label>
                   <input
@@ -730,14 +741,14 @@ export const FinanceModule: React.FC = () => {
                     onChange={(e) =>
                       setTxForm({ ...txForm, amount: parseInt(e.target.value) || 0 })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600 font-bold"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Payment Method</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Payment Method</label>
                   <select
                     value={txForm.paymentMethod}
                     onChange={(e) =>
@@ -746,7 +757,7 @@ export const FinanceModule: React.FC = () => {
                         paymentMethod: e.target.value as any,
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600 cursor-pointer"
                   >
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Cash">Cash</option>
@@ -755,20 +766,20 @@ export const FinanceModule: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Receipt / Reference No.
                   </label>
                   <input
                     type="text"
                     value={txForm.receiptNumber}
                     onChange={(e) => setTxForm({ ...txForm, receiptNumber: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600 font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Description / Purpose *
                 </label>
                 <textarea
@@ -777,15 +788,15 @@ export const FinanceModule: React.FC = () => {
                   value={txForm.description}
                   onChange={(e) => setTxForm({ ...txForm, description: e.target.value })}
                   placeholder="Detail member names, items purchased, invoice references..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-emerald-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddTxModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -804,14 +815,14 @@ export const FinanceModule: React.FC = () => {
       {/* Add Budget Need Modal */}
       {isAddBudgetModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Register Capital Budget Need
               </h3>
               <button
                 onClick={() => setIsAddBudgetModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -819,7 +830,7 @@ export const FinanceModule: React.FC = () => {
 
             <form onSubmit={handleCreateBudget} className="mt-4 space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Need Description *</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Need Description *</label>
                 <input
                   type="text"
                   required
@@ -828,13 +839,13 @@ export const FinanceModule: React.FC = () => {
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, description: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Estimated Cost (₦) *
                   </label>
                   <input
@@ -848,11 +859,11 @@ export const FinanceModule: React.FC = () => {
                         estimatedCost: parseInt(e.target.value) || 0,
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600 font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Priority</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Priority</label>
                   <select
                     value={budgetForm.priority}
                     onChange={(e) =>
@@ -861,7 +872,7 @@ export const FinanceModule: React.FC = () => {
                         priority: e.target.value as any,
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 cursor-pointer"
                   >
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
@@ -871,22 +882,22 @@ export const FinanceModule: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Target Date</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Target Date</label>
                 <input
                   type="date"
                   value={budgetForm.targetDate}
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, targetDate: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddBudgetModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -970,6 +981,37 @@ export const FinanceModule: React.FC = () => {
           </table>
         </div>
       </PrintModal>
+
+      {/* GLOBAL SHARE VIA WHATSAPP & PDF */}
+      {isDirectShareOpen && (
+        <ShareModal
+          isOpen={isDirectShareOpen}
+          onClose={() => setIsDirectShareOpen(false)}
+          documentTitle={`Official Financial Statement (${selectedPeriod.toUpperCase()})`}
+          documentType="Financial Report"
+          subtitle={`Dominion City Asaba • Information Desk Department • Net Balance: ${formatNaira(netBalance)}`}
+          documentRef={`FIN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`}
+          isConfidential={true}
+          contentLines={[
+            `Department: Information Desk Department`,
+            `Reporting Window: ${selectedPeriod === 'all' ? 'All Records' : `Past ${selectedPeriod}`}`,
+            `Total Revenue / Dues Collected: ${formatNaira(totalIncome)}`,
+            `Total Approved Expenditures: ${formatNaira(totalExpense)}`,
+            `Closing Department Treasury Balance: ${formatNaira(netBalance)}`,
+            `Active Budget Goals Tracked: ${budgetNeeds.length}`,
+          ]}
+          tableHeaders={['Date', 'Type', 'Category', 'Description', 'Amount', 'Payment Method']}
+          tableRows={periodFilteredTransactions.map((tx) => [
+            formatDate(tx.date),
+            tx.type,
+            tx.category,
+            tx.description,
+            formatNaira(tx.amount),
+            `${tx.paymentMethod} (${tx.receiptNumber})`,
+          ])}
+          summaryNotes={`Confidential Financial Statement compiled by ${currentUser.name} (${currentUser.role}). For authorized leadership review only.`}
+        />
+      )}
     </div>
   );
 };

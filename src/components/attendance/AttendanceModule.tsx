@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import {
-  AttendanceRecord,
-  ServiceType,
-  AttendanceStatus,
-  FinalizedAttendanceReport,
-  AbsenceFollowUp,
-} from '../../types/models';
+import { AttendanceRecord, DepartmentMember, ChurchLocationConfig, ServiceType } from '../../types/models';
 import { formatDate } from '../../utils/dateUtils';
 import { exportToCSV } from '../../utils/exportUtils';
 import { PrintModal } from '../common/PrintModal';
+import { ShareModal } from '../common/ShareModal';
 import confetti from 'canvas-confetti';
 import {
   MapPin,
@@ -21,6 +16,7 @@ import {
   Users,
   Search,
   Printer,
+  Share2,
   Download,
   Calendar,
   ShieldCheck,
@@ -35,24 +31,20 @@ import {
   Lock,
   Unlock,
   FileText,
-  MessageSquare,
-  Copy,
-  Check,
-  ExternalLink,
   Phone,
-  HeartHandshake,
+  Briefcase,
+  Cake,
+  Check,
+  LogOut,
+  Navigation,
+  Crosshair,
+  Building,
+  BookOpen,
+  ArrowRight,
+  Settings,
 } from 'lucide-react';
 
-// Church coordinates for Dominion City Asaba Central HQ (Summit Road, Asaba)
-export const CHURCH_COORDINATES = {
-  name: 'Dominion City Asaba Central HQ',
-  address: 'Summit Road, Asaba, Delta State, Nigeria',
-  latitude: 6.1982,
-  longitude: 6.6953,
-  allowedRadiusMeters: 350, // 350 meters radius around the church premises
-};
-
-// Haversine formula to calculate distance in meters between two lat/lng points
+// Haversine formula to calculate distance in meters between two lat/lng coordinates
 export function calculateDistanceMeters(
   lat1: number,
   lon1: number,
@@ -74,1537 +66,1355 @@ export function calculateDistanceMeters(
   return Math.round(R * c);
 }
 
-// Helper to determine the default active service based on current date & time
-function detectCurrentService(): ServiceType {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sunday, 2 = Tuesday, 4 = Thursday
-  const hour = now.getHours();
-
-  if (day === 0) {
-    return hour < 9 ? 'Sunday 1st Service' : 'Sunday 2nd Service';
-  } else if (day === 2) {
-    return 'Tuesday Word & Communion';
-  } else if (day === 4) {
-    return 'Thursday Prayer Meeting';
-  }
-  return 'Tuesday Word & Communion';
-}
-
 export const AttendanceModule: React.FC = () => {
-  const { currentUser, canManageMembers, canManageAttendance, isHOD, isSecretary } = useAuth();
+  const { currentUser, canManageMembers, canManageAttendance, isHOD, isOperations, isSecretary } =
+    useAuth();
   const {
     members,
     attendance,
     addAttendanceRecord,
+    updateAttendanceRecord,
     deleteAttendanceRecord,
-    finalizedAttendance,
-    finalizeAttendance,
-    reopenAttendance,
-    absenceFollowUps,
-    addAbsenceFollowUp,
-    updateAbsenceFollowUp,
+    clockOutAttendanceRecord,
+    churchLocationConfig,
+    updateChurchLocationConfig,
   } = useData();
 
-  // Active sub-tab
-  const [activeTab, setActiveTab] = useState<'terminal' | 'finalized' | 'follow-up'>('terminal');
+  const isAuthorizedManager =
+    canManageAttendance || canManageMembers || isHOD || isOperations || isSecretary;
 
-  // Current live time for clock
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // -------------------------------------------------------------
+  // SUNDAY SERVICE DATE SELECTION
+  // -------------------------------------------------------------
+  const availableServiceDates = useMemo(() => {
+    const dates = Array.from(new Set(attendance.map((a) => a.serviceDate)));
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!dates.includes(todayStr)) {
+      dates.push(todayStr);
+    }
+    return dates.sort().reverse();
+  }, [attendance]);
 
-  // Geolocation & Vicinity states
-  const [geoMode, setGeoMode] = useState<'live' | 'simulate-inside' | 'simulate-outside' | 'desk-override'>('live');
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
-  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(
+    availableServiceDates[0] || new Date().toISOString().split('T')[0]
+  );
 
-  // Clock-in form state
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
-  const [isVisitorWorker, setIsVisitorWorker] = useState(false);
-  const [visitorName, setVisitorName] = useState('');
-  const [visitorPhone, setVisitorPhone] = useState('');
-  const [visitorUnit, setVisitorUnit] = useState('First Timers Welcome');
-  const [serviceType, setServiceType] = useState<ServiceType>(detectCurrentService());
-  const [clockInNotes, setClockInNotes] = useState('');
-  const [recentClockInSuccess, setRecentClockInSuccess] = useState<string | null>(null);
+  // Service Day Filter (Sunday vs Tuesday)
+  const [serviceDayFilter, setServiceDayFilter] = useState<'all' | 'Sunday' | 'Tuesday'>('all');
 
-  // Register view filter states
-  const [filterDate, setFilterDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [filterService, setFilterService] = useState<string>('All');
-  const [searchMember, setSearchMember] = useState('');
+  const filteredServiceDates = useMemo(() => {
+    return availableServiceDates.filter((dateStr) => {
+      if (serviceDayFilter === 'all') return true;
+      const d = new Date(dateStr);
+      const day = d.getDay();
+      if (serviceDayFilter === 'Sunday') {
+        return day === 0 || attendance.some((a) => a.serviceDate === dateStr && a.serviceType?.startsWith('Sunday'));
+      }
+      if (serviceDayFilter === 'Tuesday') {
+        return day === 2 || attendance.some((a) => a.serviceDate === dateStr && a.serviceType?.startsWith('Tuesday'));
+      }
+      return true;
+    });
+  }, [availableServiceDates, serviceDayFilter, attendance]);
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stationFilter, setStationFilter] = useState<'all' | 'Desk A' | 'Desk B' | 'Bookstand' | 'Present' | 'Absent'>('all');
+
+  // Modals state
+  const [selectedMemberForClockIn, setSelectedMemberForClockIn] = useState<DepartmentMember | null>(null);
+  const [clockInStation, setClockInStation] = useState<'Desk A' | 'Desk B' | 'Bookstand'>('Desk A');
+  const [clockInServiceDay, setClockInServiceDay] = useState<'Sunday' | 'Tuesday'>('Sunday');
+  const [clockInServiceType, setClockInServiceType] = useState<ServiceType>('Sunday 1st Service');
+  const [clockInDate, setClockInDate] = useState<string>(selectedDate);
+  const [isClockInModalOpen, setIsClockInModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Geolocation state for Clock-In modal
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationDistance, setLocationDistance] = useState<number | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'checking' | 'allowed' | 'denied' | 'error'>('idle');
+  const [locationErrorMessage, setLocationErrorMessage] = useState<string>('');
+  const [isAdminOverrideChecked, setIsAdminOverrideChecked] = useState(false);
+  const [adminOverrideReason, setAdminOverrideReason] = useState('');
+
+  // Admin Geofence Settings Modal
+  const [isGeofenceModalOpen, setIsGeofenceModalOpen] = useState(false);
+  const [configName, setConfigName] = useState(churchLocationConfig.name);
+  const [configAddress, setConfigAddress] = useState(churchLocationConfig.address);
+  const [configLatitude, setConfigLatitude] = useState(String(churchLocationConfig.latitude));
+  const [configLongitude, setConfigLongitude] = useState(String(churchLocationConfig.longitude));
+  const [configRadius, setConfigRadius] = useState(String(churchLocationConfig.allowedRadiusMeters));
+
+  // Print sheet state
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  // Finalize attendance modal state
-  const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
-  const [finalizeRemarks, setFinalizeRemarks] = useState('');
+  // -------------------------------------------------------------
+  // ATTENDANCE RECORDS FOR SELECTED SUNDAY
+  // -------------------------------------------------------------
+  const dateAttendanceMap = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    attendance
+      .filter((a) => a.serviceDate === selectedDate)
+      .forEach((a) => {
+        if (a.memberId) {
+          map.set(a.memberId, a);
+        } else {
+          // Fallback matching by member name
+          const matched = members.find(
+            (m) => m.fullName.toLowerCase() === a.memberName.toLowerCase()
+          );
+          if (matched) map.set(matched.id, a);
+        }
+      });
+    return map;
+  }, [attendance, selectedDate, members]);
 
-  // Selected finalized report for detail viewing
-  const [selectedReportDetail, setSelectedReportDetail] = useState<FinalizedAttendanceReport | null>(null);
+  // Statistics
+  const totalDepartmentMembers = members.length;
+  const presentRecords = useMemo(() => {
+    return Array.from(dateAttendanceMap.values()).filter(
+      (a) => a.status === 'Present' || a.status === 'Clocked Out'
+    );
+  }, [dateAttendanceMap]);
 
-  // Follow-up message preview modal
-  const [activeFollowUpMessage, setActiveFollowUpMessage] = useState<{ member: AbsenceFollowUp; text: string } | null>(null);
-  const [copiedMessage, setCopiedMessage] = useState(false);
-  const [followUpFilterStatus, setFollowUpFilterStatus] = useState<'All' | 'Pending' | 'Contacted' | 'Completed'>('All');
+  const presentCount = presentRecords.length;
+  const absentCount = Math.max(0, totalDepartmentMembers - presentCount);
+  const attendanceRate =
+    totalDepartmentMembers > 0 ? Math.round((presentCount / totalDepartmentMembers) * 100) : 0;
 
-  // Update live clock every second
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const deskACount = useMemo(() => {
+    return presentRecords.filter((a) => a.servingStation === 'Desk A').length;
+  }, [presentRecords]);
 
-  // Update distance based on geoMode and coordinates
-  useEffect(() => {
-    if (geoMode === 'simulate-inside') {
-      setUserCoords({ latitude: 6.19825, longitude: 6.69532 });
-      setCalculatedDistance(35); // 35 meters: inside
-      setGpsError(null);
-      setGpsLoading(false);
-    } else if (geoMode === 'simulate-outside') {
-      setUserCoords({ latitude: 6.225, longitude: 6.735 }); // outside ~4.8 km away
-      setCalculatedDistance(4850);
-      setGpsError(null);
-      setGpsLoading(false);
-    } else if (geoMode === 'desk-override') {
-      setUserCoords({ latitude: CHURCH_COORDINATES.latitude, longitude: CHURCH_COORDINATES.longitude });
-      setCalculatedDistance(0);
-      setGpsError(null);
-      setGpsLoading(false);
-    } else if (geoMode === 'live') {
-      requestLiveLocation();
+  const deskBCount = useMemo(() => {
+    return presentRecords.filter((a) => a.servingStation === 'Desk B').length;
+  }, [presentRecords]);
+
+  // Supports multiple bookstand attendants
+  const bookstandCount = useMemo(() => {
+    return presentRecords.filter((a) => a.servingStation === 'Bookstand').length;
+  }, [presentRecords]);
+
+  // Filtered members list for the grid
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      const attRecord = dateAttendanceMap.get(member.id);
+      const isPresent = attRecord && (attRecord.status === 'Present' || attRecord.status === 'Clocked Out');
+      const station = attRecord?.servingStation;
+
+      // Filter by station/status
+      let matchesFilter = true;
+      if (stationFilter === 'Present') matchesFilter = !!isPresent;
+      else if (stationFilter === 'Absent') matchesFilter = !isPresent;
+      else if (stationFilter === 'Desk A') matchesFilter = station === 'Desk A';
+      else if (stationFilter === 'Desk B') matchesFilter = station === 'Desk B';
+      else if (stationFilter === 'Bookstand') matchesFilter = station === 'Bookstand';
+
+      // Search query
+      const matchesSearch =
+        !searchQuery ||
+        member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.departmentRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.phone.includes(searchQuery) ||
+        member.residentialArea.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesFilter && matchesSearch;
+    });
+  }, [members, dateAttendanceMap, stationFilter, searchQuery]);
+
+  // -------------------------------------------------------------
+  // CLOCK-IN WORKFLOW & LOCATION CHECK
+  // -------------------------------------------------------------
+  const handleOpenClockIn = (member: DepartmentMember) => {
+    setSelectedMemberForClockIn(member);
+    // Pre-select station: if member is Bookstand Manager, default to Bookstand, else Desk A
+    if (member.departmentRole.toLowerCase().includes('bookstand')) {
+      setClockInStation('Bookstand');
+    } else {
+      setClockInStation('Desk A');
     }
-  }, [geoMode]);
 
-  const requestLiveLocation = () => {
+    // Determine default service day: check if selectedDate is a Tuesday
+    const selDay = new Date(selectedDate).getDay();
+    const isTuesday = selDay === 2 || new Date().getDay() === 2;
+    setClockInServiceDay(isTuesday ? 'Tuesday' : 'Sunday');
+    setClockInServiceType(isTuesday ? 'Tuesday Word & Communion' : 'Sunday 1st Service');
+    setClockInDate(selectedDate);
+
+    setIsAdminOverrideChecked(false);
+    setAdminOverrideReason('');
+    setUserLocation(null);
+    setLocationDistance(null);
+    setLocationErrorMessage('');
+    setIsClockInModalOpen(true);
+
+    // Request GPS location immediately
+    checkDeviceLocation();
+  };
+
+  const checkDeviceLocation = () => {
     if (!navigator.geolocation) {
-      setGpsError('Geolocation is not supported by your browser.');
+      setLocationStatus('error');
+      setLocationErrorMessage('Geolocation is not supported by your browser.');
       return;
     }
-    setGpsLoading(true);
-    setGpsError(null);
+
+    setLocationStatus('checking');
+    setLocationErrorMessage('');
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        setUserCoords({ latitude: lat, longitude: lon });
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+
         const dist = calculateDistanceMeters(
-          lat,
-          lon,
-          CHURCH_COORDINATES.latitude,
-          CHURCH_COORDINATES.longitude
+          latitude,
+          longitude,
+          churchLocationConfig.latitude,
+          churchLocationConfig.longitude
         );
-        setCalculatedDistance(dist);
-        setGpsLoading(false);
+        setLocationDistance(dist);
+
+        if (dist <= churchLocationConfig.allowedRadiusMeters) {
+          setLocationStatus('allowed');
+        } else {
+          setLocationStatus('denied');
+        }
       },
-      (err) => {
-        setGpsLoading(false);
-        setGpsError(
-          err.message ||
-            'Unable to retrieve GPS coordinates. Please grant location permissions or select a simulation mode for testing.'
-        );
+      (error) => {
+        setLocationStatus('error');
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationErrorMessage(
+            'Location permission denied. Please allow location access in your browser settings or contact an authorized administrator for exception approval.'
+          );
+        } else {
+          setLocationErrorMessage(
+            'GPS signal could not be acquired accurately. Please ensure device location is enabled.'
+          );
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
     );
   };
 
-  // Determine if inside church vicinity
-  const isInsideVicinity = useMemo(() => {
-    if (geoMode === 'desk-override' || geoMode === 'simulate-inside') return true;
-    if (geoMode === 'simulate-outside') return false;
-    if (calculatedDistance === null) return false;
-    return calculatedDistance <= CHURCH_COORDINATES.allowedRadiusMeters;
-  }, [geoMode, calculatedDistance]);
+  const handleConfirmClockIn = () => {
+    if (!selectedMemberForClockIn) return;
 
-  // Handle Clock-in Submission
-  const handleClockIn = (e: React.FormEvent) => {
-    e.preventDefault();
+    // Check duplicate: prevent double clock-in for this Sunday
+    const existing = dateAttendanceMap.get(selectedMemberForClockIn.id);
+    if (existing && existing.status === 'Present') {
+      alert(`${selectedMemberForClockIn.fullName} is already clocked in for this service!`);
+      return;
+    }
 
-    // Verify vicinity
-    if (!isInsideVicinity && geoMode !== 'desk-override') {
+    const isInsideRadius = locationStatus === 'allowed';
+    const isOverride = isAdminOverrideChecked && isAuthorizedManager;
+
+    if (!isInsideRadius && !isOverride) {
       alert(
-        `Clock-In Rejected: You are outside the church vicinity (~${
-          calculatedDistance !== null
-            ? calculatedDistance >= 1000
-              ? (calculatedDistance / 1000).toFixed(1) + ' km'
-              : calculatedDistance + ' meters'
-            : 'Unknown distance'
-        } away). You must be within ${
-          CHURCH_COORDINATES.allowedRadiusMeters
-        }m of Dominion City Asaba sanctuary to sign in.`
+        `Cannot clock in outside the church perimeter. You are ${locationDistance}m away from Dominion City Headquarters (allowed radius: ${churchLocationConfig.allowedRadiusMeters}m).`
       );
       return;
     }
 
-    let memberName = '';
-    let memberPhone = '';
-    let departmentRole = '';
-    let photoUrl: string | undefined = undefined;
-    let memberId: string | undefined = undefined;
-
-    if (isVisitorWorker) {
-      if (!visitorName.trim()) {
-        alert('Please enter your full name.');
-        return;
-      }
-      memberName = visitorName.trim();
-      memberPhone = visitorPhone.trim();
-      departmentRole = `Guest / First-Timer (${visitorUnit})`;
-    } else {
-      const targetId = selectedMemberId || currentUser.id;
-      const matched = members.find((m) => m.id === targetId);
-      if (matched) {
-        memberId = matched.id;
-        memberName = matched.fullName;
-        memberPhone = matched.phone;
-        departmentRole = matched.departmentRole;
-        photoUrl = matched.photoUrl;
-      } else {
-        memberId = currentUser.id;
-        memberName = currentUser.name;
-        memberPhone = currentUser.phone;
-        departmentRole = currentUser.departmentRole;
-        const matchedCurrentUser = members.find((m) => m.id === currentUser.id || m.fullName.toLowerCase() === currentUser.name.toLowerCase());
-        photoUrl = matchedCurrentUser?.photoUrl || currentUser.avatarUrl;
-      }
-    }
-
-    // Check if already clocked in for this service today
-    const todayStr = currentTime.toISOString().split('T')[0];
-    const alreadySigned = attendance.some(
-      (a) =>
-        a.serviceDate === todayStr &&
-        a.serviceType === serviceType &&
-        ((memberId && a.memberId === memberId) || a.memberName.toLowerCase() === memberName.toLowerCase())
-    );
-
-    if (alreadySigned) {
-      alert(`${memberName} has already clocked in for ${serviceType} today.`);
-      return;
-    }
-
-    // Auto formatted time: e.g. "07:22:15 AM"
-    const clockInTimeStr = currentTime.toLocaleTimeString('en-US', {
+    const clockInTimeStr = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
     });
 
-    // Punctuality calculation
-    const hour = currentTime.getHours();
-    const minute = currentTime.getMinutes();
-    let status: AttendanceStatus = 'Present';
+    const newRecordPayload: Omit<AttendanceRecord, 'id' | 'createdAt'> = {
+      memberId: selectedMemberForClockIn.id,
+      memberName: selectedMemberForClockIn.fullName,
+      memberPhone: selectedMemberForClockIn.phone,
+      departmentRole: selectedMemberForClockIn.departmentRole,
+      photoUrl: selectedMemberForClockIn.photoUrl,
+      serviceDate: clockInDate,
+      clockInTime: clockInTimeStr,
+      serviceType: clockInServiceType,
+      status: 'Present',
+      servingStation: clockInStation,
+      verifiedLocation: isInsideRadius,
+      distanceFromChurchMeters: locationDistance || (isOverride ? 0 : 50),
+      latitude: userLocation?.lat || churchLocationConfig.latitude,
+      longitude: userLocation?.lng || churchLocationConfig.longitude,
+      deviceInfo: isOverride ? 'Admin Authorized Override' : 'GPS Mobile Verified',
+      isManualOverride: isOverride,
+      notes: isOverride
+        ? `Admin Override by ${currentUser.name}: ${adminOverrideReason || 'On-site exception authorized'}`
+        : `Verified attendance at ${clockInStation} for ${clockInServiceType}`,
+      markedBy: isOverride
+        ? `Admin Exception (${currentUser.name})`
+        : `Self Clock-In (${currentUser.name})`,
+    };
 
-    if (serviceType === 'Sunday 1st Service' && (hour > 7 || (hour === 7 && minute > 30))) {
-      status = 'Late';
-    } else if (serviceType === 'Sunday 2nd Service' && (hour > 10 || (hour === 10 && minute > 0))) {
-      status = 'Late';
-    } else if (serviceType === 'Tuesday Word & Communion' && (hour > 18 || (hour === 18 && minute > 0))) {
-      status = 'Late';
+    if (existing) {
+      updateAttendanceRecord(existing.id, newRecordPayload);
+    } else {
+      addAttendanceRecord(newRecordPayload);
     }
 
-    const markedByLabel =
-      geoMode === 'desk-override'
-        ? `Desk Lead Override (${currentUser.name})`
-        : geoMode === 'simulate-inside'
-        ? 'GPS Verified (Vicinity Sim: 35m)'
-        : `Self Clock-In (GPS Verified: ${calculatedDistance || 0}m)`;
-
-    addAttendanceRecord({
-      memberId,
-      memberName,
-      memberPhone,
-      departmentRole,
-      photoUrl,
-      serviceDate: todayStr,
-      clockInTime: clockInTimeStr,
-      serviceType,
-      status,
-      verifiedLocation: true,
-      distanceFromChurchMeters: calculatedDistance !== null ? calculatedDistance : 0,
-      latitude: userCoords?.latitude,
-      longitude: userCoords?.longitude,
-      deviceInfo: `${navigator.platform} - ${navigator.userAgent.slice(0, 40)}`,
-      notes: clockInNotes.trim() || undefined,
-      markedBy: markedByLabel,
-    });
+    setIsClockInModalOpen(false);
 
     confetti({
-      particleCount: 80,
+      particleCount: 70,
       spread: 60,
       origin: { y: 0.6 },
-      colors: ['#2563EB', '#10B981', '#F59E0B'],
+      colors: ['#2563EB', '#10B981', '#3B82F6'],
     });
+  };
 
-    setRecentClockInSuccess(`${memberName} clocked in at ${clockInTimeStr} (${status})`);
-    setTimeout(() => setRecentClockInSuccess(null), 6000);
-
-    // Reset inputs
-    setClockInNotes('');
-    if (isVisitorWorker) {
-      setVisitorName('');
-      setVisitorPhone('');
+  // Clock Out
+  const handleClockOut = (recordId: string, memberName: string) => {
+    if (confirm(`Clock out ${memberName} and record departure time?`)) {
+      clockOutAttendanceRecord(recordId);
     }
   };
 
-  // Filtered Attendance List
-  const filteredAttendance = useMemo(() => {
-    return attendance.filter((rec) => {
-      const matchDate = !filterDate || rec.serviceDate === filterDate;
-      const matchService = filterService === 'All' || rec.serviceType === filterService;
-      const matchSearch =
-        !searchMember ||
-        rec.memberName.toLowerCase().includes(searchMember.toLowerCase()) ||
-        rec.departmentRole?.toLowerCase().includes(searchMember.toLowerCase()) ||
-        rec.memberPhone?.includes(searchMember);
-      return matchDate && matchService && matchSearch;
-    });
-  }, [attendance, filterDate, filterService, searchMember]);
+  // Save Geofence Settings
+  const handleSaveGeofence = (e: React.FormEvent) => {
+    e.preventDefault();
+    const lat = parseFloat(configLatitude);
+    const lng = parseFloat(configLongitude);
+    const rad = parseInt(configRadius, 10);
 
-  // Daily statistics
-  const todayRecords = attendance.filter(
-    (a) => a.serviceDate === currentTime.toISOString().split('T')[0]
-  );
-  const onTimeCount = todayRecords.filter((a) => a.status === 'Present').length;
-  const lateCount = todayRecords.filter((a) => a.status === 'Late').length;
-  const onTimePercentage = todayRecords.length > 0 ? Math.round((onTimeCount / todayRecords.length) * 100) : 100;
+    if (isNaN(lat) || isNaN(lng) || isNaN(rad) || rad <= 0) {
+      alert('Please enter valid coordinates and radius in meters.');
+      return;
+    }
 
-  // Finalize attendance calculation for current active filter
-  const targetServiceForFinalize = filterService === 'All' ? serviceType : (filterService as ServiceType);
-  const targetDateForFinalize = filterDate || currentTime.toISOString().split('T')[0];
-
-  const candidateAttendanceForFinalize = attendance.filter(
-    (a) => a.serviceDate === targetDateForFinalize && a.serviceType === targetServiceForFinalize
-  );
-
-  const presentMemberIds = candidateAttendanceForFinalize
-    .map((a) => a.memberId)
-    .filter(Boolean) as string[];
-
-  const absentMembers = members.filter((m) => !presentMemberIds.includes(m.id));
-  const absentMemberIds = absentMembers.map((m) => m.id);
-
-  const totalEligibleCount = members.length;
-  const finalizePresentCount = candidateAttendanceForFinalize.length;
-  const finalizeLateCount = candidateAttendanceForFinalize.filter((a) => a.status === 'Late').length;
-  const finalizeAbsentCount = absentMembers.length;
-  const finalizeAttendanceRate = totalEligibleCount > 0 ? Math.round((finalizePresentCount / totalEligibleCount) * 100) : 0;
-
-  const handleConfirmFinalize = () => {
-    finalizeAttendance({
-      serviceDate: targetDateForFinalize,
-      serviceType: targetServiceForFinalize,
-      closedBy: currentUser.name,
-      totalEligible: totalEligibleCount,
-      presentCount: finalizePresentCount,
-      lateCount: finalizeLateCount,
-      absentCount: finalizeAbsentCount,
-      excusedCount: 0,
-      attendanceRate: finalizeAttendanceRate,
-      presentMemberIds,
-      absentMemberIds,
-      notes: finalizeRemarks.trim() || undefined,
+    updateChurchLocationConfig({
+      name: configName.trim() || 'Dominion City Headquarters, Asaba',
+      address: configAddress.trim(),
+      latitude: lat,
+      longitude: lng,
+      allowedRadiusMeters: rad,
+      lastUpdatedBy: currentUser.name,
     });
 
-    // Populate follow-ups for absent members
-    absentMembers.forEach((m) => {
-      const exists = absenceFollowUps.some(
-        (fu) => fu.memberId === m.id && fu.serviceDate === targetDateForFinalize
-      );
-      if (!exists) {
-        addAbsenceFollowUp({
-          memberId: m.id,
-          memberName: m.fullName,
-          memberPhone: m.phone,
-          photoUrl: m.photoUrl,
-          serviceDate: targetDateForFinalize,
-          serviceType: targetServiceForFinalize,
-          status: 'Pending',
-        });
-      }
-    });
-
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-
-    setIsFinalizeModalOpen(false);
-    setFinalizeRemarks('');
-    setActiveTab('finalized');
+    setIsGeofenceModalOpen(false);
+    alert('Church headquarters geofence coordinates updated successfully!');
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(
-      filteredAttendance.map((a) => ({
-        'Service Date': a.serviceDate,
-        'Member Name': a.memberName,
-        'Role / Unit': a.departmentRole || 'N/A',
-        'Service Type': a.serviceType,
-        'Clock-In Time': a.clockInTime,
-        'Punctuality Status': a.status,
-        'Distance (Meters)': a.distanceFromChurchMeters ?? 'N/A',
-        'Marked By': a.markedBy,
-        Notes: a.notes || '',
-      })),
-      `DominionCity_Attendance_${filterDate || 'all'}`
+  // Calibrate Geofence to Current GPS Position
+  const handleCalibrateToCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setConfigLatitude(pos.coords.latitude.toFixed(6));
+        setConfigLongitude(pos.coords.longitude.toFixed(6));
+        alert(
+          `Current coordinates captured: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}. Click "Save Geofence Settings" to apply.`
+        );
+      },
+      (err) => {
+        alert(`Error getting current position: ${err.message}`);
+      },
+      { enableHighAccuracy: true }
     );
   };
 
-  const generateFollowUpText = (fu: AbsenceFollowUp) => {
-    const firstName = fu.memberName.split(' ')[0] || fu.memberName;
-    return `Dear ${firstName}, we missed your presence at Dominion City Asaba Information Desk during ${fu.serviceType} (${formatDate(fu.serviceDate)}). Hope you and your family are doing well! Please let us know if there is anything we can pray with you about or support you with. Have a deeply blessed and favored week! Warm regards, Dominion City Asaba Information Desk.`;
+  // Export Attendance CSV
+  const handleExportCSV = () => {
+    exportToCSV(
+      members.map((m) => {
+        const att = dateAttendanceMap.get(m.id);
+        const isPresent = att && (att.status === 'Present' || att.status === 'Clocked Out');
+        return {
+          ServiceDate: selectedDate,
+          FullName: m.fullName,
+          DepartmentRole: m.departmentRole,
+          Phone: m.phone,
+          Status: isPresent ? (att.status === 'Clocked Out' ? 'CLOCKED OUT' : 'PRESENT') : 'NOT YET CLOCKED IN',
+          ServingStation: att?.servingStation || 'Not Assigned',
+          ClockInTime: att?.clockInTime || '—',
+          ClockOutTime: att?.clockOutTime || '—',
+          GPSVerified: att?.verifiedLocation ? 'Yes' : 'No',
+          DistanceMeters: att?.distanceFromChurchMeters ?? '—',
+        };
+      }),
+      `DominionCity_Asaba_Attendance_${selectedDate}`
+    );
   };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedMessage(true);
-    setTimeout(() => setCopiedMessage(false), 3000);
-  };
-
-  const filteredFollowUps = absenceFollowUps.filter((fu) => {
-    if (followUpFilterStatus === 'All') return true;
-    return fu.status === followUpFilterStatus;
-  });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl shadow-sm card-gradient-border-emerald glow-emerald">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 glow-dot-emerald">
-              <UserCheck className="w-5 h-5" />
-            </span>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Service Attendance & Geofenced Clock-In Terminal
+    <div className="space-y-6 animate-in fade-in duration-150">
+      {/* ----------------------------------------------------------- */}
+      {/* 1. TOP HEADER BANNER: BLUE IDENTITY & ATTENDANCE KPI STRIP */}
+      {/* ----------------------------------------------------------- */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#0B1E48] via-[#103070] to-[#1E489E] text-white shadow-xl border border-blue-500/30">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-400/20 text-blue-200 border border-blue-400/30 text-[10px] font-black uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
+              Dominion City Asaba • Information Desk Department
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <UserCheck className="w-6 h-6 text-blue-300" />
+              {new Date(selectedDate).getDay() === 2 ? 'Tuesday Service Attendance' : 'Sunday Service Attendance'}
             </h2>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time automated sign-in for Sunday and Midweek services with church vicinity GPS validation.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Close Service / Finalize Attendance Button for Authorized Officers */}
-          {(canManageAttendance || isHOD || isSecretary) && (
-            <button
-              onClick={() => setIsFinalizeModalOpen(true)}
-              className="btn-compact btn-glow-amber"
-            >
-              <Lock className="w-4 h-4" />
-              Close Service / Finalise Attendance
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsPrintModalOpen(true)}
-            className="btn-compact bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-          >
-            <Printer className="w-4 h-4" />
-            Print Register
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="btn-compact bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Sub-Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-        <button
-          onClick={() => setActiveTab('terminal')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'terminal'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <UserCheck className="w-4 h-4" />
-          Live Clock-In Terminal & Register
-        </button>
-
-        <button
-          onClick={() => setActiveTab('finalized')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'finalized'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Finalised Reports ({finalizedAttendance.length})
-        </button>
-
-        {(canManageAttendance || isHOD || isSecretary) && (
-          <button
-            onClick={() => setActiveTab('follow-up')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'follow-up'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <HeartHandshake className="w-4 h-4" />
-            Absence Follow-Up Workspace
-            {absenceFollowUps.filter((f) => f.status === 'Pending').length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950">
-                {absenceFollowUps.filter((f) => f.status === 'Pending').length}
-              </span>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* ========================================================================= */}
-      {/* TAB 1: LIVE CLOCK-IN TERMINAL & REGISTER                                 */}
-      {/* ========================================================================= */}
-      {activeTab === 'terminal' && (
-        <div className="space-y-6">
-          {/* Key Metrics Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Today's Attendance
-                </span>
-                <Users className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-2">{todayRecords.length}</p>
-              <span className="text-[11px] text-slate-400 font-medium">Workers & Members</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
-                  On-Time Rate
-                </span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              </div>
-              <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-2">{onTimePercentage}%</p>
-              <span className="text-[11px] text-emerald-600 font-medium">{onTimeCount} on-time arrivals</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-600">
-                  Late Arrivals
-                </span>
-                <Clock className="w-4 h-4 text-amber-600" />
-              </div>
-              <p className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-2">{lateCount}</p>
-              <span className="text-[11px] text-amber-600 font-medium">Arrived after cut-off</span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                  Current Live Time
-                </span>
-                <Radio className="w-4 h-4 text-blue-600 animate-pulse" />
-              </div>
-              <p className="text-xl font-black text-blue-900 dark:text-blue-300 mt-2 font-mono">
-                {currentTime.toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-              </p>
-              <span className="text-[11px] text-blue-500 font-medium">Auto-recorded on clock-in</span>
-            </div>
+            <p className="text-xs sm:text-sm text-blue-100/90 mt-1 max-w-xl">
+              Member directory clock-in terminal with church GPS location verification and live serving station management.
+            </p>
           </div>
 
-          {/* Terminal Dual Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column (5 Cols): Clock-In Form & Location Checker */}
-            <div className="lg:col-span-5 space-y-5">
-              {/* Geolocation Vicinity Verifier Card */}
-              <div className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                      Church Vicinity GPS Verification
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={requestLiveLocation}
-                    disabled={gpsLoading}
-                    className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${gpsLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </button>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-[#131F38] border border-slate-100 dark:border-slate-800 text-xs">
-                    <MapPin className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-white">{CHURCH_COORDINATES.name}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{CHURCH_COORDINATES.address}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 font-mono">
-                        Target Lat/Lng: {CHURCH_COORDINATES.latitude}, {CHURCH_COORDINATES.longitude} • Radius: {CHURCH_COORDINATES.allowedRadiusMeters}m
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mode Selector */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                      Geofence Verification Mode:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setGeoMode('live')}
-                        className={`p-2 text-xs rounded-xl font-bold border transition-all text-left ${
-                          geoMode === 'live'
-                            ? 'bg-blue-50 border-blue-500 text-blue-900 dark:bg-blue-950/60 dark:text-blue-200'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600'
-                        }`}
-                      >
-                        📡 Device Live GPS
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGeoMode('simulate-inside')}
-                        className={`p-2 text-xs rounded-xl font-bold border transition-all text-left ${
-                          geoMode === 'simulate-inside'
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600'
-                        }`}
-                      >
-                        ✓ Inside Vicinity (35m)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGeoMode('simulate-outside')}
-                        className={`p-2 text-xs rounded-xl font-bold border transition-all text-left ${
-                          geoMode === 'simulate-outside'
-                            ? 'bg-rose-50 border-rose-500 text-rose-900 dark:bg-rose-950/60 dark:text-rose-200'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600'
-                        }`}
-                      >
-                        ✕ Outside Vicinity (~4.8km)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGeoMode('desk-override')}
-                        className={`p-2 text-xs rounded-xl font-bold border transition-all text-left ${
-                          geoMode === 'desk-override'
-                            ? 'bg-purple-50 border-purple-500 text-purple-900 dark:bg-purple-950/60 dark:text-purple-200'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600'
-                        }`}
-                      >
-                        🛡️ Desk Lead Override
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Proximity Result Banner */}
-                  <div
-                    className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
-                      isInsideVicinity || geoMode === 'desk-override'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-900 dark:text-emerald-300'
-                        : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 text-rose-900 dark:text-rose-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isInsideVicinity || geoMode === 'desk-override' ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                      )}
-                      <div>
-                        <p className="font-bold">
-                          {geoMode === 'desk-override'
-                            ? 'Desk Lead Override Active'
-                            : isInsideVicinity
-                            ? 'Inside Sanctuary Vicinity'
-                            : 'Outside Approved Sanctuary Radius'}
-                        </p>
-                        <p className="text-[11px] opacity-90 mt-0.5">
-                          {geoMode === 'desk-override'
-                            ? `Authorized manual entry by ${currentUser.name}`
-                            : calculatedDistance !== null
-                            ? `Distance from altar: ~${calculatedDistance} meters (Allowed: ${CHURCH_COORDINATES.allowedRadiusMeters}m)`
-                            : 'Acquiring GPS fix...'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Clock-In Terminal Submission Card */}
-              <form
-                onSubmit={handleClockIn}
-                className="bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4"
-              >
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                    Submit Clock-In Record
-                  </h3>
-                  <span className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400">
-                    {currentTime.toLocaleTimeString()}
-                  </span>
-                </div>
-
-                {recentClockInSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs flex items-center gap-2 animate-in zoom-in-95">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{recentClockInSuccess}</span>
-                  </div>
-                )}
-
-                {/* Member Selector */}
-                {!isVisitorWorker ? (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Select Department Member:
-                    </label>
-                    <select
-                      value={selectedMemberId || currentUser.id}
-                      onChange={(e) => setSelectedMemberId(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-900 dark:text-white font-medium"
-                    >
-                      {members.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.fullName} ({m.departmentRole})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700">Visitor Full Name:</label>
-                      <input
-                        type="text"
-                        value={visitorName}
-                        onChange={(e) => setVisitorName(e.target.value)}
-                        placeholder="e.g. Sister Grace Okonkwo"
-                        className="w-full text-xs p-2 rounded-xl border border-slate-200 bg-slate-50 mt-1"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-700">Phone Number:</label>
-                      <input
-                        type="tel"
-                        value={visitorPhone}
-                        onChange={(e) => setVisitorPhone(e.target.value)}
-                        placeholder="0803XXXXXXX"
-                        className="w-full text-xs p-2 rounded-xl border border-slate-200 bg-slate-50 mt-1"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs pt-1">
-                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-600 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={isVisitorWorker}
-                      onChange={(e) => setIsVisitorWorker(e.target.checked)}
-                      className="rounded text-blue-600"
-                    />
-                    <span>Clock-in for Guest / First-Timer Worker</span>
-                  </label>
-                </div>
-
-                {/* Service Selection */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Service Session:
-                  </label>
-                  <select
-                    value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value as ServiceType)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-900 dark:text-white font-medium"
-                  >
-                    <option value="Sunday 1st Service">Sunday 1st Service (7:00 AM)</option>
-                    <option value="Sunday 2nd Service">Sunday 2nd Service (9:30 AM)</option>
-                    <option value="Tuesday Word & Communion">Tuesday Word & Communion (5:30 PM)</option>
-                    <option value="Thursday Prayer Meeting">Thursday Prayer Meeting (9:00 PM)</option>
-                    <option value="Special Meeting">Special Service / Departmental Retreat</option>
-                  </select>
-                </div>
-
-                {/* Clock-In Notes */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Optional Remarks / Duty Station:
-                  </label>
-                  <input
-                    type="text"
-                    value={clockInNotes}
-                    onChange={(e) => setClockInNotes(e.target.value)}
-                    placeholder="e.g. Front Desk Wing A, Books Desk..."
-                    className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={!isInsideVicinity && geoMode !== 'desk-override'}
-                  className={`w-full h-10 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isInsideVicinity || geoMode === 'desk-override'
-                      ? 'btn-glow-blue'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Confirm Clock-In at{' '}
-                  {currentTime.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })}
-                </button>
-                {!isInsideVicinity && geoMode !== 'desk-override' && (
-                  <p className="text-[11px] text-center text-rose-600 font-medium">
-                    🔒 Button locked: You must be inside church premises to sign in.
-                  </p>
-                )}
-              </form>
-            </div>
-
-            {/* Right Column (7 Cols): Live Attendance Register & Historical Log */}
-            <div className="lg:col-span-7 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between">
-              <div className="space-y-4">
-                {/* Filter Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-slate-500" />
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Attendance Register ({filteredAttendance.length})
-                    </h3>
-                  </div>
-
-                  {/* Service & Date Filter */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={filterDate}
-                      onChange={(e) => setFilterDate(e.target.value)}
-                      className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-700 dark:text-slate-200"
-                    />
-
-                    <select
-                      value={filterService}
-                      onChange={(e) => setFilterService(e.target.value)}
-                      className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-700 dark:text-slate-200"
-                    >
-                      <option value="All">All Services</option>
-                      <option value="Sunday 1st Service">Sunday 1st</option>
-                      <option value="Sunday 2nd Service">Sunday 2nd</option>
-                      <option value="Tuesday Word & Communion">Tuesday Midweek</option>
-                      <option value="Thursday Prayer Meeting">Thursday Prayer</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Search Input */}
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={searchMember}
-                    onChange={(e) => setSearchMember(e.target.value)}
-                    placeholder="Search attendee by name, role or phone..."
-                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                {/* Attendance Table */}
-                <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-[#131F38] text-slate-500 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
-                      <tr>
-                        <th className="py-2.5 px-3">Member</th>
-                        <th className="py-2.5 px-3">Service</th>
-                        <th className="py-2.5 px-3">Clock-In</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3">Verification</th>
-                        {canManageMembers && <th className="py-2.5 px-3 text-right">Action</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {filteredAttendance.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="py-10 text-center text-slate-400">
-                            No attendance records found for this date/service.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAttendance.map((rec) => {
-                          const matchedMember = members.find((m) => m.id === rec.memberId);
-                          const photo = matchedMember?.photoUrl || rec.photoUrl;
-
-                          return (
-                            <tr key={rec.id} className="hover:bg-slate-50/80 dark:hover:bg-[#131F38] transition-colors">
-                              <td className="py-2.5 px-3">
-                                <div className="flex items-center gap-2.5">
-                                  {photo ? (
-                                    <img
-                                      src={photo}
-                                      alt={rec.memberName}
-                                      className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-200 shrink-0"
-                                    />
-                                  ) : (
-                                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
-                                      {rec.memberName.charAt(0)}
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="font-bold text-slate-900 dark:text-white">{rec.memberName}</p>
-                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">{rec.departmentRole}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">
-                                <span className="block">{rec.serviceType}</span>
-                                <span className="text-[10px] text-slate-400">{rec.serviceDate}</span>
-                              </td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-blue-900 dark:text-blue-300">
-                                {rec.clockInTime}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    rec.status === 'Present'
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                      : rec.status === 'Late'
-                                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                      : 'bg-slate-100 text-slate-700'
-                                  }`}
-                                >
-                                  {rec.status === 'Present' ? 'On-Time' : rec.status}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 block">
-                                  {rec.markedBy.includes('Override') ? '🛡️ Desk Override' : '📍 GPS Verified'}
-                                </span>
-                                {rec.distanceFromChurchMeters !== undefined && (
-                                  <span className="text-[9px] text-slate-400">
-                                    ~{rec.distanceFromChurchMeters}m from sanctuary
-                                  </span>
-                                )}
-                              </td>
-                              {canManageMembers && (
-                                <td className="py-2.5 px-3 text-right">
-                                  <button
-                                    onClick={() => {
-                                      if (confirm(`Remove attendance record for ${rec.memberName}?`)) {
-                                        deleteAttendanceRecord(rec.id);
-                                      }
-                                    }}
-                                    className="text-slate-400 hover:text-red-600 text-[11px] font-semibold transition-colors cursor-pointer"
-                                    title="Delete entry"
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              )}
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Showing {filteredAttendance.length} attendance logs</span>
-                <span>Dominion City Asaba • Information Desk</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: FINALISED SERVICE REPORTS & AUDITS                                 */}
-      {/* ========================================================================= */}
-      {activeTab === 'finalized' && (
-        <div className="space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0E172B] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Archived & Finalised Service Reports ({finalizedAttendance.length})
-              </h3>
-              <p className="text-xs text-slate-500">
-                Official end-of-service attendance audits with present, late, and absent breakdowns.
-              </p>
-            </div>
-            {(canManageAttendance || isHOD || isSecretary) && (
+          {/* Action Tools */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isAuthorizedManager && (
               <button
-                onClick={() => setIsFinalizeModalOpen(true)}
-                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors cursor-pointer shadow-xs"
+                onClick={() => {
+                  setConfigName(churchLocationConfig.name);
+                  setConfigAddress(churchLocationConfig.address);
+                  setConfigLatitude(String(churchLocationConfig.latitude));
+                  setConfigLongitude(String(churchLocationConfig.longitude));
+                  setConfigRadius(String(churchLocationConfig.allowedRadiusMeters));
+                  setIsGeofenceModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors cursor-pointer border border-white/20"
+                title="Configure Church GPS Geofence"
               >
-                + Finalise Another Service
+                <Settings className="w-4 h-4 text-blue-300" />
+                <span>Geofence Settings</span>
               </button>
             )}
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {finalizedAttendance.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-                No finalized attendance reports on record yet.
-              </div>
-            ) : (
-              finalizedAttendance.map((report) => (
-                <div
-                  key={report.id}
-                  className="p-5 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                      <span className="text-xs font-bold text-blue-900 dark:text-blue-300">
-                        {report.serviceType}
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {formatDate(report.serviceDate)}
-                      </span>
-                    </div>
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer border border-emerald-400/40 shadow-sm"
+              title="Share service attendance sheet via WhatsApp"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Share Attendance</span>
+            </button>
 
-                    {report.isReopened && (
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                        ⚠️ Reopened Audit Trail Active
-                      </span>
-                    )}
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors cursor-pointer border border-white/20"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Print Roster</span>
+            </button>
 
-                    <div className="grid grid-cols-4 gap-2 text-center py-2 bg-slate-50 dark:bg-[#131F38] rounded-xl border border-slate-100 dark:border-slate-800">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Total</span>
-                        <span className="text-sm font-black text-slate-900 dark:text-white">{report.totalEligible}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-emerald-600 font-bold uppercase block">Present</span>
-                        <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">{report.presentCount}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-amber-600 font-bold uppercase block">Late</span>
-                        <span className="text-sm font-black text-amber-700 dark:text-amber-400">{report.lateCount}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-rose-600 font-bold uppercase block">Absent</span>
-                        <span className="text-sm font-black text-rose-700 dark:text-rose-400">{report.absentCount}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Attendance Rate:</span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">{report.attendanceRate}%</span>
-                    </div>
-
-                    <div className="text-[11px] text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-2">
-                      <p>Closed by: <strong>{report.closedBy}</strong></p>
-                      <p className="text-[10px] text-slate-400">{new Date(report.closedAt).toLocaleString()}</p>
-                    </div>
-
-                    {report.notes && (
-                      <p className="text-xs text-slate-600 dark:text-slate-300 italic bg-blue-50/50 p-2 rounded-lg">
-                        "{report.notes}"
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedReportDetail(report)}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 cursor-pointer"
-                    >
-                      View Breakdown →
-                    </button>
-
-                    {isHOD && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`Reopen attendance for ${report.serviceType} on ${report.serviceDate}? An audit trail will be recorded.`)) {
-                            reopenAttendance(report.id, currentUser.name);
-                          }
-                        }}
-                        className="text-[11px] font-bold text-amber-700 hover:text-amber-900 cursor-pointer"
-                      >
-                        Reopen (HOD)
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors cursor-pointer border border-white/20"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* TAB 3: ABSENCE FOLLOW-UP WORKSPACE (Prompt Section 4F)                     */}
-      {/* ========================================================================= */}
-      {activeTab === 'follow-up' && (
-        <div className="space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0E172B] p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-rose-50 text-rose-600">
-                  <HeartHandshake className="w-5 h-5" />
-                </span>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Absence Follow-Up & Pastoral Care Workspace
-                </h3>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Private follow-up records for members who were absent from service. Prepare polite messages and record reasons.
-              </p>
-            </div>
-
-            {/* Filter by Follow-Up Status */}
-            <div className="flex items-center gap-1.5">
-              {(['All', 'Pending', 'Contacted', 'Completed'] as const).map((st) => (
+        {/* ----------------------------------------------------------- */}
+        {/* SERVICE DAY & SERVICE DATE SELECTOR (Sunday & Tuesday)     */}
+        {/* ----------------------------------------------------------- */}
+        <div className="mt-5 pt-4 border-t border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            {/* Service Day Filter Pills */}
+            <div className="flex items-center gap-1 shrink-0 bg-blue-950/60 p-1 rounded-xl border border-blue-800/60">
+              {(['all', 'Sunday', 'Tuesday'] as const).map((dayOpt) => (
                 <button
-                  key={st}
-                  onClick={() => setFollowUpFilterStatus(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                    followUpFilterStatus === st
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                  key={dayOpt}
+                  onClick={() => setServiceDayFilter(dayOpt)}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    serviceDayFilter === dayOpt
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'text-blue-200 hover:text-white'
                   }`}
                 >
-                  {st}
+                  {dayOpt === 'all' ? 'All Services' : dayOpt === 'Sunday' ? '☀️ Sunday' : '🔥 Tuesday'}
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-xs font-bold text-blue-200 shrink-0 flex items-center gap-1 mr-1">
+                <Calendar className="w-3.5 h-3.5 text-blue-300" />
+                Date:
+              </span>
+
+              {filteredServiceDates.map((dateStr) => {
+                const isSelected = dateStr === selectedDate;
+                const d = new Date(dateStr);
+                const isTue = d.getDay() === 2;
+                return (
+                  <button
+                    key={dateStr}
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-white text-blue-900 shadow-md ring-2 ring-blue-300'
+                        : 'bg-white/10 hover:bg-white/20 text-blue-100 border border-white/10'
+                    }`}
+                  >
+                    <span>{isTue ? '🔥 Tue' : '☀️ Sun'} {formatDate(dateStr)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredFollowUps.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-                No absent member follow-ups under "{followUpFilterStatus}" status.
-              </div>
-            ) : (
-              filteredFollowUps.map((fu) => {
-                const memberRecord = members.find((m) => m.id === fu.memberId);
-                const photo = memberRecord?.photoUrl || fu.photoUrl;
+          <div className="flex items-center gap-2 text-xs font-bold text-blue-200 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Active Attendance Session: {new Date(selectedDate).getDay() === 2 ? 'Tuesday Word & Communion' : 'Sunday Service'} ({formatDate(selectedDate)})</span>
+          </div>
+        </div>
+      </div>
 
-                return (
-                  <div
-                    key={fu.id}
-                    className="p-5 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
-                  >
-                    <div>
-                      {/* Member Info */}
-                      <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={photo}
-                            alt={fu.memberName}
-                            className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-200 shrink-0"
-                          />
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                              {fu.memberName}
-                            </h4>
-                            <p className="text-[10px] text-slate-500">
-                              {memberRecord?.departmentRole || 'Department Worker'}
-                            </p>
-                            <p className="text-[11px] font-mono text-blue-600 mt-0.5">
-                              {fu.memberPhone || memberRecord?.phone}
-                            </p>
-                          </div>
-                        </div>
+      {/* ----------------------------------------------------------- */}
+      {/* 2. KPI METRIC SUMMARY CARDS                                 */}
+      {/* ----------------------------------------------------------- */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            Total Members
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+            {totalDepartmentMembers}
+          </p>
+          <span className="text-[10px] text-slate-400">Department Roster</span>
+        </div>
 
+        <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 shadow-xs">
+          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">
+            Clocked In (Present)
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+            {presentCount}
+          </p>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+            {attendanceRate}% of department
+          </span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 shadow-xs">
+          <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider block">
+            🏢 Desk A Attendants
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-300 mt-1">
+            {deskACount}
+          </p>
+          <span className="text-[10px] text-blue-600 dark:text-blue-400">Left Wing Station</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 shadow-xs">
+          <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
+            🏢 Desk B Attendants
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-1">
+            {deskBCount}
+          </p>
+          <span className="text-[10px] text-indigo-600 dark:text-indigo-400">Right Wing Station</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 shadow-xs">
+          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider block">
+            📚 Bookstand Attendants
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">
+            {bookstandCount}
+          </p>
+          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+            Multi-attendant support
+          </span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            Not Yet Clocked In
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-slate-700 dark:text-slate-300 mt-1">
+            {absentCount}
+          </p>
+          <span className="text-[10px] text-slate-400">Pending arrivals</span>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------- */}
+      {/* 3. SEARCH & STATION FILTER BAR (MATCHING MEMBER DIRECTORY) */}
+      {/* ----------------------------------------------------------- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-[#0E172B] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search member name, role, residential area..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+          />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1">
+          {[
+            { id: 'all', label: `All (${members.length})` },
+            { id: 'Present', label: `Present (${presentCount})` },
+            { id: 'Absent', label: `Not Clocked In (${absentCount})` },
+            { id: 'Desk A', label: `Desk A (${deskACount})` },
+            { id: 'Desk B', label: `Desk B (${deskBCount})` },
+            { id: 'Bookstand', label: `Bookstand (${bookstandCount})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStationFilter(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                stationFilter === tab.id
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------- */}
+      {/* 4. RESPONSIVE GRID OF MEMBER PROFILE CARDS                  */}
+      {/* ----------------------------------------------------------- */}
+      {filteredMembers.length === 0 ? (
+        <div className="p-10 text-center bg-white dark:bg-[#0E172B] rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
+          <Users className="w-10 h-10 text-slate-400 mx-auto" />
+          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            No matching members found
+          </h4>
+          <p className="text-xs text-slate-500">
+            Try adjusting your search query or station filter.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {filteredMembers.map((member) => {
+            const att = dateAttendanceMap.get(member.id);
+            const isPresent = att && att.status === 'Present';
+            const isClockedOut = att && att.status === 'Clocked Out';
+            const isNotClockedIn = !att || att.status === 'Late';
+
+            // Station styling
+            const station = att?.servingStation;
+
+            return (
+              <div
+                key={member.id}
+                className={`bg-white dark:bg-[#0E172B] rounded-3xl border p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 ${
+                  isPresent
+                    ? 'border-emerald-300 dark:border-emerald-800/80 ring-2 ring-emerald-500/10'
+                    : isClockedOut
+                    ? 'border-purple-300 dark:border-purple-800/80'
+                    : 'border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <div>
+                  {/* Photo & Attendance Status Pill */}
+                  <div className="flex items-start justify-between">
+                    <img
+                      src={member.photoUrl}
+                      alt={member.fullName}
+                      className="w-16 h-16 rounded-2xl object-cover ring-2 ring-blue-100 dark:ring-blue-900 shadow-xs"
+                    />
+
+                    {isPresent ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        PRESENT
+                      </span>
+                    ) : isClockedOut ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+                        CLOCKED OUT
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        NOT YET CLOCKED IN
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Name & Role */}
+                  <div className="mt-3.5">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                      {member.fullName}
+                    </h3>
+                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mt-0.5 truncate">
+                      {member.departmentRole}
+                    </p>
+                  </div>
+
+                  {/* Station & Clock-In Information */}
+                  <div className="mt-4 space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    {/* Serving Station */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500">Serving Station:</span>
+                      {station ? (
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            fu.status === 'Completed'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : fu.status === 'Contacted'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                            station === 'Desk A'
+                              ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900'
+                              : station === 'Desk B'
+                              ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900'
+                              : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
                           }`}
                         >
-                          {fu.status}
+                          {station === 'Bookstand' ? '📚 Bookstand' : `🏢 ${station}`}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Not Assigned</span>
+                      )}
+                    </div>
+
+                    {/* Service Type */}
+                    {att?.serviceType && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Service:</span>
+                        <span className="font-semibold text-blue-600 dark:text-blue-400 text-[11px]">
+                          {att.serviceType}
                         </span>
                       </div>
+                    )}
 
-                      <div className="mt-3 space-y-2 text-xs">
-                        <div className="text-slate-600 dark:text-slate-300">
-                          <span className="font-semibold text-slate-800 dark:text-slate-100">Missed Service: </span>
-                          {fu.serviceType} ({formatDate(fu.serviceDate)})
+                    {/* Clock-In Timestamp & Location Verification */}
+                    {att && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            Clock-in:
+                          </span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                            {att.clockInTime}
+                          </span>
                         </div>
 
-                        {fu.reasonProvided && (
-                          <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#131F38] text-[11px]">
-                            <span className="font-bold text-slate-700 dark:text-slate-200">Reason Provided: </span>
-                            {fu.reasonProvided}
+                        {att.clockOutTime && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 flex items-center gap-1">
+                              <LogOut className="w-3 h-3 text-purple-400" />
+                              Clock-out:
+                            </span>
+                            <span className="font-mono font-bold text-purple-700 dark:text-purple-300">
+                              {att.clockOutTime}
+                            </span>
                           </div>
                         )}
 
-                        {fu.notes && (
-                          <div className="p-2 rounded-lg bg-blue-50/50 text-[11px] text-blue-900">
-                            <span className="font-bold">Private Note: </span>
-                            {fu.notes}
-                          </div>
-                        )}
-
-                        {fu.contactedBy && (
-                          <p className="text-[10px] text-slate-400">
-                            Followed up by {fu.contactedBy} ({new Date(fu.contactedAt || '').toLocaleDateString()})
-                          </p>
-                        )}
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-400">GPS Proximity:</span>
+                          <span
+                            className={`font-semibold flex items-center gap-1 ${
+                              att.verifiedLocation ? 'text-emerald-600' : 'text-amber-600'
+                            }`}
+                          >
+                            <ShieldCheck className="w-3 h-3" />
+                            {att.distanceFromChurchMeters
+                              ? `${att.distanceFromChurchMeters}m from HQ`
+                              : 'Location Verified'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                </div>
 
-                    {/* Actions */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                {/* Primary Action Button */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {isNotClockedIn ? (
+                    <button
+                      onClick={() => handleOpenClockIn(member)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all hover:scale-102 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      <span>CLOCK IN</span>
+                    </button>
+                  ) : isPresent ? (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() =>
-                          setActiveFollowUpMessage({
-                            member: fu,
-                            text: generateFollowUpText(fu),
-                          })
-                        }
-                        className="w-full py-1.5 px-3 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        onClick={() => handleClockOut(att.id, member.fullName)}
+                        className="flex-1 py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-800 dark:hover:bg-rose-950 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1"
                       >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Prepare Follow-Up Message
+                        <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                        <span>CLOCK OUT</span>
                       </button>
 
-                      <div className="flex items-center gap-1">
+                      {isAuthorizedManager && (
                         <button
-                          onClick={() => {
-                            const reason = prompt('Enter reason provided by member:', fu.reasonProvided || '');
-                            if (reason !== null) {
-                              updateAbsenceFollowUp(fu.id, {
-                                reasonProvided: reason,
-                                status: 'Contacted',
-                                contactedBy: currentUser.name,
-                                contactedAt: new Date().toISOString(),
-                              });
-                            }
-                          }}
-                          className="flex-1 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold cursor-pointer"
+                          onClick={() => handleOpenClockIn(member)}
+                          className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 dark:bg-slate-800 dark:hover:bg-blue-950 text-slate-500 text-xs transition-colors cursor-pointer"
+                          title="Change Station or Edit Clock-in"
                         >
-                          Record Reason
+                          <Settings className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => {
-                            updateAbsenceFollowUp(fu.id, {
-                              status: fu.status === 'Completed' ? 'Pending' : 'Completed',
-                              contactedBy: currentUser.name,
-                              contactedAt: new Date().toISOString(),
-                            });
-                          }}
-                          className="flex-1 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold cursor-pointer"
-                        >
-                          {fu.status === 'Completed' ? 'Mark Pending' : 'Mark Completed'}
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  ) : (
+                    <div className="text-center py-1">
+                      <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 block">
+                        Shift Finished
+                      </span>
+                      {isAuthorizedManager && (
+                        <button
+                          onClick={() => handleOpenClockIn(member)}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer mt-0.5"
+                        >
+                          Re-open Shift
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: CLOSE SERVICE / FINALISE ATTENDANCE                                */}
-      {/* ========================================================================= */}
-      {isFinalizeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#0E172B] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-amber-50 text-amber-700">
-                  <Lock className="w-5 h-5" />
-                </span>
+      {/* ----------------------------------------------------------- */}
+      {/* 5. MODAL: ONE-CLICK CLOCK-IN WITH GPS RADIUS VERIFICATION  */}
+      {/* ----------------------------------------------------------- */}
+      {isClockInModalOpen && selectedMemberForClockIn && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0E172B] rounded-t-3xl sm:rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 max-h-[96vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Native Mobile Pull Indicator */}
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold shadow-xs">
+                  <UserCheck className="w-4 h-4" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Close Service & Finalise Attendance
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Service Attendance Clock-In
                   </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Official End-of-Service Audit Calculation
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Proximity verified at Dominion City Asaba HQ
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsFinalizeModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                onClick={() => setIsClockInModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center cursor-pointer transition-colors text-base font-bold"
+                aria-label="Close modal"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 leading-relaxed">
-                <p>
-                  <strong>Service:</strong> {targetServiceForFinalize} •{' '}
-                  <strong>Date:</strong> {formatDate(targetDateForFinalize)}
-                </p>
-                <p className="mt-1 text-[11px] text-blue-800">
-                  This action compares all <strong>{totalEligibleCount} eligible members</strong> against the confirmed clock-ins. Absent members will be added to the private Follow-Up Workspace.
-                </p>
-              </div>
-
-              {/* Breakdown Grid */}
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#131F38] border border-slate-200">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Eligible</span>
-                  <span className="text-xl font-black text-slate-900 dark:text-white">{totalEligibleCount}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Present</span>
-                  <span className="text-xl font-black text-emerald-700">{finalizePresentCount}</span>
-                  <span className="text-[10px] text-emerald-600 block font-medium">({finalizeAttendanceRate}%)</span>
-                </div>
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200">
-                  <span className="text-[10px] text-rose-700 font-bold uppercase block">Absent</span>
-                  <span className="text-xl font-black text-rose-700">{finalizeAbsentCount}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Optional Closing Remarks / Observations:
-                </label>
-                <textarea
-                  value={finalizeRemarks}
-                  onChange={(e) => setFinalizeRemarks(e.target.value)}
-                  placeholder="e.g. Excellent early morning arrival. Weather condition favorable..."
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#131F38] text-slate-900 dark:text-white"
-                  rows={3}
+            {/* Modal Body */}
+            <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 overscroll-contain">
+              {/* Member Card Profile */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                <img
+                  src={selectedMemberForClockIn.photoUrl}
+                  alt={selectedMemberForClockIn.fullName}
+                  className="w-12 h-12 rounded-2xl object-cover ring-2 ring-blue-200 dark:ring-blue-900"
                 />
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {selectedMemberForClockIn.fullName}
+                  </h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 font-medium truncate">
+                    {selectedMemberForClockIn.departmentRole}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Service Date: <strong className="text-slate-600 dark:text-slate-300">{formatDate(clockInDate)}</strong>
+                  </p>
+                </div>
               </div>
+
+              {/* Service Day Selection: Sunday vs Tuesday Services */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Select Service Schedule *
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClockInServiceDay('Sunday');
+                      setClockInServiceType('Sunday 1st Service');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      clockInServiceDay === 'Sunday'
+                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 ring-2 ring-blue-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        ☀️ Sunday Service
+                      </span>
+                      {clockInServiceDay === 'Sunday' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">Regular Sunday Officiating</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClockInServiceDay('Tuesday');
+                      setClockInServiceType('Tuesday Word & Communion');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      clockInServiceDay === 'Tuesday'
+                        ? 'border-teal-600 bg-teal-50/70 dark:bg-teal-950/40 ring-2 ring-teal-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        🔥 Tuesday Service
+                      </span>
+                      {clockInServiceDay === 'Tuesday' && <CheckCircle2 className="w-4 h-4 text-teal-600" />}
+                    </div>
+                    <span className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold mt-1 block">Word & Communion</span>
+                  </button>
+                </div>
+
+                {clockInServiceDay === 'Sunday' && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setClockInServiceType('Sunday 1st Service')}
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        clockInServiceType === 'Sunday 1st Service'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      Sunday 1st Service
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClockInServiceType('Sunday 2nd Service')}
+                      className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        clockInServiceType === 'Sunday 2nd Service'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      Sunday 2nd Service
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Serving Station Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Select Serving Station *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Desk A */}
+                  <button
+                    type="button"
+                    onClick={() => setClockInStation('Desk A')}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      clockInStation === 'Desk A'
+                        ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        🏢 Desk A
+                      </span>
+                      {clockInStation === 'Desk A' && (
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">Left Wing Station</span>
+                  </button>
+
+                  {/* Desk B */}
+                  <button
+                    type="button"
+                    onClick={() => setClockInStation('Desk B')}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      clockInStation === 'Desk B'
+                        ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        🏢 Desk B
+                      </span>
+                      {clockInStation === 'Desk B' && (
+                        <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">Right Wing Station</span>
+                  </button>
+
+                  {/* Bookstand */}
+                  <button
+                    type="button"
+                    onClick={() => setClockInStation('Bookstand')}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      clockInStation === 'Bookstand'
+                        ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 ring-2 ring-amber-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        📚 Bookstand
+                      </span>
+                      {clockInStation === 'Bookstand' && (
+                        <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1 block">
+                      Multi-attendant
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Location Verification Status Box */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                    Physical Church Proximity Verification
+                  </span>
+                  <button
+                    type="button"
+                    onClick={checkDeviceLocation}
+                    className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Re-check GPS
+                  </button>
+                </div>
+
+                {locationStatus === 'checking' && (
+                  <div className="flex items-center gap-2 text-xs text-blue-600 font-medium">
+                    <span className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    Acquiring GPS coordinates and checking distance to church premises...
+                  </div>
+                )}
+
+                {locationStatus === 'allowed' && (
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      Within Church Headquarters Perimeter
+                    </p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                      Calculated distance: <strong>~{locationDistance} meters</strong> from Dominion City HQ (NTA Road, Asaba). Approved radius: {churchLocationConfig.allowedRadiusMeters}m.
+                    </p>
+                  </div>
+                )}
+
+                {locationStatus === 'denied' && (
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      Outside Approved Church Radius
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      You are currently <strong>~{locationDistance?.toLocaleString()} meters</strong> away. Normal Sunday clock-in requires being within <strong>{churchLocationConfig.allowedRadiusMeters} meters</strong> of the church building along NTA Road, Asaba.
+                    </p>
+                  </div>
+                )}
+
+                {locationStatus === 'error' && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      GPS Acquisition Error
+                    </p>
+                    <p className="text-[11px]">{locationErrorMessage}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin-Controlled Exception Override for Location Issues */}
+              {(locationStatus === 'denied' || locationStatus === 'error') && isAuthorizedManager && (
+                <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-xs space-y-2">
+                  <label className="flex items-center gap-2 font-bold text-purple-900 dark:text-purple-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdminOverrideChecked}
+                      onChange={(e) => setIsAdminOverrideChecked(e.target.checked)}
+                      className="rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
+                    <span>Authorize Administrator Exception Clock-In</span>
+                  </label>
+                  <p className="text-[11px] text-purple-700 dark:text-purple-400">
+                    As an authorized department officer ({currentUser.name}), you may approve attendance for members with GPS device issues or signal drift.
+                  </p>
+                  {isAdminOverrideChecked && (
+                    <input
+                      type="text"
+                      placeholder="Reason for exception (e.g. Phone GPS hardware fault, on-site verified)..."
+                      value={adminOverrideReason}
+                      onChange={(e) => setAdminOverrideReason(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-purple-300 dark:border-purple-700 bg-white dark:bg-[#131F38] text-slate-900 dark:text-white"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-[#070F1E] border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white/95 dark:bg-[#0E172B]/95 backdrop-blur-md px-5 py-3 border-t border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsFinalizeModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 cursor-pointer"
+                onClick={() => setIsClockInModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirmFinalize}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md cursor-pointer flex items-center gap-1.5"
+                onClick={handleConfirmClockIn}
+                disabled={locationStatus === 'checking' || (locationStatus !== 'allowed' && !isAdminOverrideChecked)}
+                className="px-5 py-2.5 text-xs font-black text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md cursor-pointer transition-transform hover:scale-102 flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
-                Confirm & Finalise Report
+                <span>Confirm &amp; Clock In</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: FOLLOW-UP MESSAGE PREVIEW (SMS & WHATSAPP)                        */}
-      {/* ========================================================================= */}
-      {activeFollowUpMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#0E172B] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      {/* ----------------------------------------------------------- */}
+      {/* 6. MODAL: GEOFENCE SETTINGS (CONFIGURABLE COORDINATES)       */}
+      {/* ----------------------------------------------------------- */}
+      {isGeofenceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#0E172B] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
+                <Settings className="w-5 h-5 text-blue-600" />
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Polite Follow-Up Message for {activeFollowUpMessage.member.memberName}
+                  Church Headquarters Geofence Settings
                 </h3>
               </div>
               <button
-                onClick={() => setActiveFollowUpMessage(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                onClick={() => setIsGeofenceModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
-              <p className="text-slate-500">
-                You can review, copy, or launch WhatsApp to deliver this courteous pastoral note:
-              </p>
-
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#131F38] border border-slate-200 dark:border-slate-700 font-sans text-slate-800 dark:text-slate-200 leading-relaxed">
-                {activeFollowUpMessage.text}
+            <form onSubmit={handleSaveGeofence} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Location Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                />
               </div>
 
-              {copiedMessage && (
-                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  Message copied to clipboard! You can paste in SMS or WhatsApp.
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Physical Address
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={configAddress}
+                  onChange={(e) => setConfigAddress(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Latitude (°N) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={configLatitude}
+                    onChange={(e) => setConfigLatitude(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-mono font-bold"
+                  />
                 </div>
-              )}
-            </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-[#070F1E] border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
-              <button
-                onClick={() => copyToClipboard(activeFollowUpMessage.text)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-800 cursor-pointer flex items-center gap-1.5"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                Copy Text
-              </button>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Longitude (°E) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={configLongitude}
+                    onChange={(e) => setConfigLongitude(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-mono font-bold"
+                  />
+                </div>
+              </div>
 
-              {activeFollowUpMessage.member.memberPhone && (
-                <a
-                  href={`https://wa.me/234${activeFollowUpMessage.member.memberPhone.replace(/^0/, '')}?text=${encodeURIComponent(
-                    activeFollowUpMessage.text
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md cursor-pointer flex items-center gap-1.5"
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Approved Attendance Radius (Meters) *
+                </label>
+                <input
+                  type="number"
+                  min="50"
+                  max="1500"
+                  required
+                  value={configRadius}
+                  onChange={(e) => setConfigRadius(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Recommended: 350 meters around the church building footprint
+                </span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleCalibrateToCurrentLocation}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Send via WhatsApp
-                </a>
-              )}
-            </div>
+                  <Crosshair className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Set to My Current GPS Position</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsGeofenceModalOpen(false)}
+                    className="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-md cursor-pointer"
+                  >
+                    Save Geofence
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: VIEW DETAILED REPORT BREAKDOWN                                     */}
-      {/* ========================================================================= */}
-      {selectedReportDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#0E172B] rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      {/* PRINT SHEET INTEGRATION */}
+      {isPrintModalOpen && (
+        <PrintModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          title={`Dominion City Asaba — Service Attendance Sheet (${formatDate(selectedDate)})`}
+          subtitle={`Information Desk Department • Present: ${presentCount} / ${totalDepartmentMembers} (${attendanceRate}%)`}
+        >
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-center p-3 rounded-lg bg-slate-50 border border-slate-200">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Audit Breakdown: {selectedReportDetail.serviceType}
-                </h3>
-                <p className="text-xs text-slate-400">Date: {formatDate(selectedReportDetail.serviceDate)}</p>
+                <span className="font-bold block">Desk A:</span>
+                <span>{deskACount} Members</span>
               </div>
-              <button onClick={() => setSelectedReportDetail(null)} className="text-slate-400 p-1">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
-                <h4 className="font-bold text-emerald-700 uppercase mb-2">
-                  ✓ Present Workers ({selectedReportDetail.presentMemberIds.length}):
-                </h4>
-                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-2">
-                  {selectedReportDetail.presentMemberIds.map((id) => {
-                    const m = members.find((mem) => mem.id === id);
-                    return (
-                      <div key={id} className="p-2 rounded-lg bg-emerald-50/60 flex items-center gap-2">
-                        <img
-                          src={m?.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                          alt={m?.fullName || id}
-                          className="w-6 h-6 rounded-full object-cover shrink-0"
-                        />
-                        <span className="font-medium text-slate-800 truncate">{m?.fullName || id}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <span className="font-bold block">Desk B:</span>
+                <span>{deskBCount} Members</span>
               </div>
-
               <div>
-                <h4 className="font-bold text-rose-700 uppercase mb-2">
-                  ✕ Absent Workers ({selectedReportDetail.absentMemberIds.length}):
-                </h4>
-                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-2">
-                  {selectedReportDetail.absentMemberIds.map((id) => {
-                    const m = members.find((mem) => mem.id === id);
-                    return (
-                      <div key={id} className="p-2 rounded-lg bg-rose-50/60 flex items-center gap-2">
-                        <img
-                          src={m?.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                          alt={m?.fullName || id}
-                          className="w-6 h-6 rounded-full object-cover shrink-0"
-                        />
-                        <span className="font-medium text-slate-800 truncate">{m?.fullName || id}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <span className="font-bold block">Bookstand:</span>
+                <span>{bookstandCount} Members</span>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setSelectedReportDetail(null)}
-                className="px-4 py-1.5 rounded-lg bg-slate-100 font-bold text-xs"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Print Register Modal */}
-      <PrintModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        title={`Official Service Attendance Register (${filterDate || 'All Dates'})`}
-      >
-        <div className="space-y-4 text-xs font-sans">
-          <div className="text-center pb-3 border-b border-slate-200">
-            <h2 className="text-base font-bold text-slate-900 uppercase">
-              Dominion City Asaba — Information Desk Department
-            </h2>
-            <p className="text-slate-600">
-              Official Service Attendance & Clock-In Register • Date: {filterDate} • Service:{' '}
-              {filterService}
-            </p>
-          </div>
-
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-300 text-[10px] font-bold uppercase text-slate-600">
-                <th className="py-1.5 px-2">#</th>
-                <th className="py-1.5 px-2">Member Full Name</th>
-                <th className="py-1.5 px-2">Department Role</th>
-                <th className="py-1.5 px-2">Service</th>
-                <th className="py-1.5 px-2">Clock-In Time</th>
-                <th className="py-1.5 px-2">Status</th>
-                <th className="py-1.5 px-2">Verification Mode</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredAttendance.map((rec, idx) => (
-                <tr key={rec.id}>
-                  <td className="py-1.5 px-2 font-mono">{idx + 1}</td>
-                  <td className="py-1.5 px-2 font-bold">{rec.memberName}</td>
-                  <td className="py-1.5 px-2">{rec.departmentRole}</td>
-                  <td className="py-1.5 px-2">{rec.serviceType}</td>
-                  <td className="py-1.5 px-2 font-mono">{rec.clockInTime}</td>
-                  <td className="py-1.5 px-2 font-semibold">{rec.status}</td>
-                  <td className="py-1.5 px-2">{rec.markedBy}</td>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-300 font-bold text-slate-700">
+                  <th className="py-2">Member Name</th>
+                  <th className="py-2">Role</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Station</th>
+                  <th className="py-2 text-right">Time In</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="pt-6 grid grid-cols-2 gap-8 text-[11px] text-slate-600">
-            <div className="border-t border-slate-400 pt-1">
-              <p className="font-bold">Head of Information Desk</p>
-              <p className="text-[10px]">Signature & Date</p>
-            </div>
-            <div className="border-t border-slate-400 pt-1">
-              <p className="font-bold">Departmental Secretary</p>
-              <p className="text-[10px]">Signature & Date</p>
-            </div>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {members.map((m) => {
+                  const att = dateAttendanceMap.get(m.id);
+                  const isPres = att && (att.status === 'Present' || att.status === 'Clocked Out');
+                  return (
+                    <tr key={m.id} className="py-1.5">
+                      <td className="py-2 font-bold">{m.fullName}</td>
+                      <td className="py-2 text-slate-600">{m.departmentRole}</td>
+                      <td className="py-2">
+                        {isPres ? (
+                          <span className="text-emerald-700 font-bold">PRESENT</span>
+                        ) : (
+                          <span className="text-slate-400">ABSENT</span>
+                        )}
+                      </td>
+                      <td className="py-2">{att?.servingStation || '—'}</td>
+                      <td className="py-2 text-right font-mono">{att?.clockInTime || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </PrintModal>
+        </PrintModal>
+      )}
+
+      {/* GLOBAL SHARE VIA WHATSAPP & PDF */}
+      {isShareModalOpen && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          documentTitle={`Service Attendance Record (${formatDate(selectedDate)})`}
+          documentType="Attendance Register"
+          subtitle={`Dominion City Asaba • Information Desk • ${new Date(selectedDate).getDay() === 2 ? 'Tuesday Service' : 'Sunday Service'}`}
+          documentRef={`ATT-${selectedDate.replace(/-/g, '')}`}
+          isConfidential={false}
+          contentLines={[
+            `Service Date: ${formatDate(selectedDate)}`,
+            `Service Day: ${new Date(selectedDate).getDay() === 2 ? 'Tuesday Word & Communion' : 'Sunday Service'}`,
+            `Total Roster: ${totalDepartmentMembers} Members`,
+            `Present Count: ${presentCount} (${attendanceRate}%)`,
+            `Absent / Pending: ${absentCount}`,
+            `Desk A Allocation: ${deskACount} Attendants`,
+            `Desk B Allocation: ${deskBCount} Attendants`,
+            `Bookstand Allocation: ${bookstandCount} Attendants`,
+          ]}
+          tableHeaders={['Member Name', 'Role', 'Status', 'Service Type', 'Station', 'Time In', 'Time Out']}
+          tableRows={members.map((m) => {
+            const att = dateAttendanceMap.get(m.id);
+            const isPres = att && (att.status === 'Present' || att.status === 'Clocked Out');
+            return [
+              m.fullName,
+              m.departmentRole,
+              isPres ? (att.status === 'Clocked Out' ? 'CLOCKED OUT' : 'PRESENT') : 'ABSENT',
+              att?.serviceType || (new Date(selectedDate).getDay() === 2 ? 'Tuesday Word & Communion' : 'Sunday Service'),
+              att?.servingStation || '—',
+              att?.clockInTime || '—',
+              att?.clockOutTime || '—',
+            ];
+          })}
+          summaryNotes={`Generated by ${currentUser.name} (${currentUser.role}) on ${new Date().toLocaleDateString('en-GB')}. Official Dominion City Asaba Information Desk Attendance Document.`}
+        />
+      )}
     </div>
   );
 };

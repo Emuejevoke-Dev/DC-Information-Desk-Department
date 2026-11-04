@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   useAuth,
   OperationalRole,
@@ -23,9 +23,10 @@ import {
   Settings2,
   Users,
   LogOut,
+  HeartHandshake,
   FileCheck,
 } from 'lucide-react';
-import { getSecurityAuditLogs } from '../../utils/securityUtils';
+import { getSecurityAuditLogs, isUserAuthorizedForRole } from '../../utils/securityUtils';
 
 interface OperationalRoleModalProps {
   isOpen: boolean;
@@ -74,10 +75,16 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
   const [confirmCode, setConfirmCode] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  if (!isOpen) return null;
+  // The official operational roles including Operations Officer and Welfare Coordinator
+  const rolesList: OperationalRole[] = ['hod', 'operations', 'finance', 'uniform', 'bookstand', 'secretary', 'welfare'];
 
-  // The official operational roles including Operations Officer
-  const rolesList: OperationalRole[] = ['hod', 'operations', 'finance', 'uniform', 'bookstand', 'secretary'];
+  const authorizedRoles = useMemo(() => {
+    return rolesList.filter((roleKey) =>
+      isUserAuthorizedForRole(roleKey, currentUser.id, currentUser.email, currentUser.name)
+    );
+  }, [currentUser]);
+
+  if (!isOpen) return null;
 
   const getRoleIcon = (roleId: OperationalRole) => {
     switch (roleId) {
@@ -93,6 +100,8 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
         return <ShoppingBag className="w-5 h-5 text-purple-500" />;
       case 'secretary':
         return <ClipboardList className="w-5 h-5 text-teal-500" />;
+      case 'welfare':
+        return <HeartHandshake className="w-5 h-5 text-pink-500" />;
     }
   };
 
@@ -177,24 +186,24 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
   const auditLogs = getSecurityAuditLogs().slice(0, 30);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto transition-all card-gradient-border glow-blue">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-[#0A1A3B] to-[#122A5E] text-white border-b border-blue-900/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-500/20 text-amber-300 ring-1 ring-blue-400/30 glow-amber">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 bg-gradient-to-r from-[#0A1A3B] to-[#122A5E] text-white border-b border-blue-900/60">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-blue-500/20 text-amber-300 ring-1 ring-blue-400/30 glow-amber shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Switch Operational Role</h2>
-              <p className="text-[11px] text-blue-200">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white truncate">Switch Operational Role</h2>
+              <p className="text-[10px] sm:text-[11px] text-blue-200 truncate">
                 Departmental Role-Based Access Control • Dominion City Asaba
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -202,17 +211,17 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
         </div>
 
         {/* Member Session Identity & Active Operational Role Strip */}
-        <div className="px-5 py-2.5 bg-slate-50 dark:bg-[#070F1E] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="px-4 sm:px-5 py-2.5 bg-slate-50 dark:bg-[#070F1E] border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">Member:</span>
-            <span className="font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</span>
+            <span className="font-bold text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-none">{currentUser.name}</span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             {isOperationalRoleActive && activeOperationalRole ? (
               <div className="flex items-center gap-1.5">
                 <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] border glow-dot-amber ${OPERATIONAL_ROLES_INFO[activeOperationalRole].badgeClass}`}>
-                  Active: {OPERATIONAL_ROLES_INFO[activeOperationalRole].title}
+                  Active: {activeOperationalRole === 'operations' ? 'Operations Deputy' : OPERATIONAL_ROLES_INFO[activeOperationalRole].title}
                 </span>
                 <button
                   onClick={handleExitRole}
@@ -230,7 +239,7 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
 
             {isDemoMode && (
               <span className="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider uppercase bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/40 glow-dot-amber">
-                Demo Mode
+                Demo
               </span>
             )}
           </div>
@@ -254,21 +263,22 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
           </div>
         )}
 
-        {/* MODAL VIEW 1: Role Selection Grid (The 5 Departmental Roles) */}
+        {/* MODAL VIEW 1: Clean Single Switch Role Control */}
         {currentView === 'roles' && (
-          <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Select Departmental Operational Role
+                  Switch Role Control
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                  Choose your assigned operational workspace to access management tools.
+                  Default mode: <strong className="text-slate-900 dark:text-white">Member Mode</strong>. Switch to your authorized officer workspace below.
                 </p>
               </div>
 
-              {/* HOD / Operations Officer / System Admin configuration button */}
-              {(activeOperationalRole === 'hod' || activeOperationalRole === 'operations' || currentUser.role === 'system_admin' || currentUser.role === 'operations_officer' || currentUser.name.includes('Chukwudi') || currentUser.name.includes('Amaka')) && (
+              {/* HOD configuration button for authorized leadership */}
+              {(isUserAuthorizedForRole('hod', currentUser.id, currentUser.email, currentUser.name) ||
+                isUserAuthorizedForRole('operations', currentUser.id, currentUser.email, currentUser.name)) && (
                 <button
                   onClick={() => {
                     setAdminFeedback(null);
@@ -283,64 +293,101 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
               )}
             </div>
 
-            {/* The 5 Clean Cards with Creative Borders & Hover Glow */}
-            <div className="grid grid-cols-1 gap-2.5">
-              {rolesList.map((roleKey) => {
-                const role = OPERATIONAL_ROLES_INFO[roleKey];
-                const isCurrent = activeOperationalRole === roleKey;
+            {/* Baseline Option: Return to Member Mode */}
+            <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+              !isOperationalRoleActive
+                ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 ring-2 ring-blue-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+            }`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Member Mode (Standard Experience)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Department directories, attendance clock-in, duty rosters, announcements & handbook.
+                  </p>
+                </div>
+              </div>
 
-                return (
-                  <div
-                    key={roleKey}
-                    className={`p-3.5 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                      isCurrent
-                        ? 'card-gradient-border-amber glow-amber shadow-xs'
-                        : 'card-gradient-border glow-blue-hover'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5">
-                        {getRoleIcon(roleKey)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                            {role.title}
-                          </h4>
-                          <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${role.badgeClass}`}>
-                            {role.badgeLabel}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                          {role.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                      {isCurrent ? (
-                        <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 px-3 py-1.5 bg-amber-100/60 dark:bg-amber-950/60 rounded-lg border border-amber-300/40 glow-dot-amber">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleSelectRole(roleKey)}
-                          className="btn-compact btn-glow-blue"
-                        >
-                          <Lock className="w-3 h-3" />
-                          <span>Access Dashboard</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {!isOperationalRoleActive ? (
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 px-3 py-1.5 bg-blue-100/60 dark:bg-blue-950/60 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Current
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleExitRole}
+                  className="btn-compact bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white shrink-0 cursor-pointer"
+                >
+                  Switch to Member Mode
+                </button>
+              )}
             </div>
 
-            {/* Help text */}
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center pt-2">
-              All department members have unrestricted access to the member portal, Sunday dress code, directory, and announcements.
-            </p>
+            {/* Departmental Operational Roles */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 pt-1">
+                Departmental Operational Roles & Workspaces:
+              </p>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {rolesList.map((roleKey) => {
+                  const role = OPERATIONAL_ROLES_INFO[roleKey];
+                  const isCurrent = activeOperationalRole === roleKey;
+
+                  return (
+                    <div
+                      key={roleKey}
+                      className={`p-3 sm:p-3.5 rounded-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isCurrent
+                          ? 'card-gradient-border-amber glow-amber shadow-xs'
+                          : 'card-gradient-border glow-blue-hover'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+                        <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5">
+                          {getRoleIcon(roleKey)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              {role.title}
+                            </h4>
+                            <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${role.badgeClass}`}>
+                              {roleKey === 'operations' ? 'Operations Manager' : role.badgeLabel}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                            {role.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end sm:justify-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                        {isCurrent ? (
+                          <span className="w-full sm:w-auto text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-100/60 dark:bg-amber-950/60 rounded-lg border border-amber-300/40 glow-dot-amber">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Active Workspace
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectRole(roleKey)}
+                            className="w-full sm:w-auto btn-compact btn-glow-blue justify-center cursor-pointer"
+                          >
+                            <Lock className="w-3 h-3" />
+                            <span>Switch to {role.title.replace('Department Leader (HOD)', 'HOD').replace('Department Secretary', 'Secretary')}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -496,14 +543,14 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
               </div>
             )}
 
-            {/* Admin Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            {/* Admin Tabs - 2x2 grid on mobile, flex on sm */}
+            <div className="grid grid-cols-2 sm:flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
               <button
                 onClick={() => {
                   setAdminFeedback(null);
                   setAdminTab('demo');
                 }}
-                className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-bold rounded-lg transition-colors cursor-pointer text-center truncate ${
                   adminTab === 'demo' ? 'bg-white dark:bg-[#07132B] text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -514,7 +561,7 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
                   setAdminFeedback(null);
                   setAdminTab('assignments');
                 }}
-                className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-bold rounded-lg transition-colors cursor-pointer text-center truncate ${
                   adminTab === 'assignments' ? 'bg-white dark:bg-[#07132B] text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -525,7 +572,7 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
                   setAdminFeedback(null);
                   setAdminTab('passwords');
                 }}
-                className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-bold rounded-lg transition-colors cursor-pointer text-center truncate ${
                   adminTab === 'passwords' ? 'bg-white dark:bg-[#07132B] text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -536,7 +583,7 @@ export const OperationalRoleModal: React.FC<OperationalRoleModalProps> = ({
                   setAdminFeedback(null);
                   setAdminTab('audit');
                 }}
-                className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-bold rounded-lg transition-colors cursor-pointer text-center truncate ${
                   adminTab === 'audit' ? 'bg-white dark:bg-[#07132B] text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400'
                 }`}
               >

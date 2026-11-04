@@ -1,6 +1,8 @@
-import React from 'react';
-import { Printer, X, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, X, Download, Share2 } from 'lucide-react';
 import { Logo } from './Logo';
+import { ShareModal } from './ShareModal';
+import { ShareDocumentType } from '../../types/models';
 
 interface PrintModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface PrintModalProps {
   isConfidential?: boolean;
   preparedBy?: string;
   approvedBy?: string;
+  documentType?: ShareDocumentType;
   children: React.ReactNode;
 }
 
@@ -23,13 +26,31 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   isConfidential = false,
   preparedBy = 'Information Desk Officer',
   approvedBy = 'Head of Department / Resident Pastor',
+  documentType,
   children,
 }) => {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  const inferredDocumentType: ShareDocumentType =
+    documentType ||
+    (title.toLowerCase().includes('finance') || title.toLowerCase().includes('budget') || title.toLowerCase().includes('transaction')
+      ? 'Financial Report'
+      : title.toLowerCase().includes('service report')
+      ? 'Service Report'
+      : title.toLowerCase().includes('attendance')
+      ? 'Attendance Register'
+      : title.toLowerCase().includes('birthday')
+      ? 'Birthday Post'
+      : title.toLowerCase().includes('collection') || title.toLowerCase().includes('form')
+      ? 'Custom Information Form'
+      : title.toLowerCase().includes('event')
+      ? 'Event Registration'
+      : 'Other');
 
   const currentDate = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -53,11 +74,19 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              title="Share this official report via WhatsApp & PDF"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Share via WhatsApp</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              Print / Save as PDF
+              <span>Print / Save as PDF</span>
             </button>
             <button
               onClick={onClose}
@@ -136,6 +165,18 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Embedded WhatsApp & PDF Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        documentTitle={title}
+        documentType={inferredDocumentType}
+        subtitle={subtitle}
+        documentRef={documentRef}
+        isConfidential={isConfidential}
+        summaryNotes={`${title} — Certified by Dominion City Asaba Information Desk Department.`}
+      />
     </div>
   );
 };

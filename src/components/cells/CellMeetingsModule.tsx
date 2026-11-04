@@ -203,7 +203,7 @@ export const CellMeetingsModule: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search cell or leader..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-blue-600 font-medium"
           />
         </div>
       </div>
@@ -292,14 +292,14 @@ export const CellMeetingsModule: React.FC = () => {
       {/* Add / Edit Cell Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">
+          <div className="bg-white dark:bg-[#0E172B] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {editingCell ? 'Edit Cell Record' : 'Register New Cell Fellowship'}
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -307,20 +307,20 @@ export const CellMeetingsModule: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Cell Name *</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Cell Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Grace & Truth Cell Fellowship"
                   value={formData.cellName}
                   onChange={(e) => setFormData({ ...formData, cellName: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Neighborhood Zone in Asaba *
                   </label>
                   <input
@@ -329,11 +329,11 @@ export const CellMeetingsModule: React.FC = () => {
                     placeholder="e.g. Summit Road, Okpanam..."
                     value={formData.neighborhood}
                     onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Meeting Format</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Meeting Format</label>
                   <select
                     value={formData.format}
                     onChange={(e) =>
@@ -342,7 +342,7 @@ export const CellMeetingsModule: React.FC = () => {
                         format: e.target.value as 'Physical' | 'Online' | 'Hybrid',
                       })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600 cursor-pointer"
                   >
                     <option value="Physical">Physical</option>
                     <option value="Hybrid">Hybrid</option>
@@ -352,7 +352,7 @@ export const CellMeetingsModule: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Full Location Street Address *
                 </label>
                 <input
@@ -363,24 +363,24 @@ export const CellMeetingsModule: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, locationAddress: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Cell Leader Name *</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Cell Leader Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Brother Emmanuel Nwachukwu"
                     value={formData.leaderName}
                     onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     Leader Phone Number *
                   </label>
                   <input
@@ -389,45 +389,45 @@ export const CellMeetingsModule: React.FC = () => {
                     placeholder="+234..."
                     value={formData.leaderPhone}
                     onChange={(e) => setFormData({ ...formData, leaderPhone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Meeting Day</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Meeting Day</label>
                   <input
                     type="text"
                     value={formData.meetingDay}
                     onChange={(e) => setFormData({ ...formData, meetingDay: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Meeting Time</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Meeting Time</label>
                   <input
                     type="text"
                     value={formData.meetingTime}
                     onChange={(e) => setFormData({ ...formData, meetingTime: e.target.value })}
                     placeholder="e.g. 06:00 PM - 07:00 PM"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Directions & Landmark</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Directions & Landmark</label>
                 <textarea
                   rows={2}
                   value={formData.directions}
                   onChange={(e) => setFormData({ ...formData, directions: e.target.value })}
                   placeholder="e.g. Opposite Sweet Spirit Hotel, 2nd compound on left..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-blue-600"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-blue-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}

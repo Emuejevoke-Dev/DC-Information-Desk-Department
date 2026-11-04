@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Upload, X, Check, Image as ImageIcon } from 'lucide-react';
 import { compressImageFile, formatFileSize } from '../../utils/fileUtils';
+import { validateImageFile } from '../../utils/securityUtils';
 
 interface ImageUploadInputProps {
   label: string;
@@ -30,8 +31,9 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
   const [fileDetails, setFileDetails] = useState<{ size: number; name: string } | null>(null);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setErrorMessage('Please select a valid image file (JPEG, PNG, WebP).');
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Invalid image file.');
       return;
     }
     setErrorMessage(null);
