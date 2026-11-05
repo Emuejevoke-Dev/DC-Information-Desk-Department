@@ -148,6 +148,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [hrdReplyInput, setHrdReplyInput] = useState('');
   const [hrdPrivateNoteInput, setHrdPrivateNoteInput] = useState('');
+  const [mobileMessageView, setMobileMessageView] = useState<'list' | 'detail'>('list');
 
   // Complaints state inside HRD
   const [complaintSearch, setComplaintSearch] = useState('');
@@ -156,6 +157,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
   const [complaintDirectiveInput, setComplaintDirectiveInput] = useState('');
   const [assignedOfficerInput, setAssignedOfficerInput] = useState('');
+  const [mobileComplaintView, setMobileComplaintView] = useState<'list' | 'detail'>('list');
 
   // Monthly Report Review Dialog
   const [reviewReportModalOpen, setReviewReportModalOpen] = useState(false);
@@ -347,17 +349,17 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-200 max-w-full overflow-hidden">
       {/* ==================================================================== */}
       {/* 1. EXECUTIVE HRD OFFICE HEADER                                       */}
       {/* ==================================================================== */}
-      <div className="p-5 sm:p-7 rounded-3xl bg-gradient-to-r from-[#170E28] via-[#2A1245] to-[#451C75] text-white shadow-xl border border-amber-500/40 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#170E28] via-[#2A1245] to-[#451C75] text-white shadow-xl border border-amber-500/40 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={onReturnToGeneral}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-purple-200 hover:text-white text-xs font-bold transition-colors cursor-pointer border border-white/10"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-purple-200 hover:text-white text-xs font-bold transition-colors cursor-pointer border border-white/10"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Return to Home</span>
@@ -367,28 +369,28 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xl shadow-lg">
-                <Crown className="w-6 h-6 text-slate-950" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-lg sm:text-xl shadow-lg shrink-0">
+                <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
                   HRD OFFICE
                 </h1>
-                <p className="text-xs sm:text-sm text-purple-200 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-purple-200 mt-0.5 leading-relaxed">
                   Exclusive Departmental Oversight, Inter-Unit Assemblies, Complaints Triage & Monthly Reports
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="px-3.5 py-1.5 rounded-xl bg-purple-900/60 border border-purple-400/40 text-xs font-bold text-purple-200">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-purple-800/40">
+            <span className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-purple-900/60 border border-purple-400/40 text-[11px] sm:text-xs font-bold text-purple-200 truncate max-w-full">
               Authenticated: <strong>{currentUser.name}</strong>
             </span>
             <button
               onClick={() => setIsAddMeetingModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition-all shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4 text-slate-950" />
               <span>Schedule Assembly</span>
@@ -403,18 +405,18 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       {/* ==================================================================== */}
       {/* 2. NINE NAVIGATION SECTIONS INSIDE HRD OFFICE                        */}
       {/* ==================================================================== */}
-      <div className="bg-white dark:bg-[#0E172B] p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-1.5 min-w-max">
+      <div className="bg-white dark:bg-[#0E172B] p-1.5 sm:p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1.5 min-w-max pb-0.5">
           {[
             { id: 'overview', label: '1. HRD Overview', icon: LayoutDashboard, badge: null },
-            { id: 'assemblies', label: '2. Leadership & Assemblies', icon: Users2, badge: upcomingLeadershipActivitiesCount },
-            { id: 'messages', label: '3. Departmental Messages', icon: Inbox, badge: newMessagesCount > 0 ? `${newMessagesCount} New` : totalMessagesCount },
-            { id: 'complaints', label: '4. Complaints & Escalations', icon: AlertTriangle, badge: outstandingIssuesCount > 0 ? `${outstandingIssuesCount} Open` : null },
-            { id: 'monthly-reports', label: '5. Unit Monthly Reports', icon: FileCheck, badge: reportsAwaitingReviewCount > 0 ? `${reportsAwaitingReviewCount} Pending` : `${monthlyReportsSubmittedCount}/${totalUnitsCount}` },
-            { id: 'department-overview', label: '6. Departmental Overview', icon: Building, badge: null },
+            { id: 'assemblies', label: '2. Assemblies', icon: Users2, badge: upcomingLeadershipActivitiesCount },
+            { id: 'messages', label: '3. Messages', icon: Inbox, badge: newMessagesCount > 0 ? `${newMessagesCount} New` : totalMessagesCount },
+            { id: 'complaints', label: '4. Complaints', icon: AlertTriangle, badge: outstandingIssuesCount > 0 ? `${outstandingIssuesCount} Open` : null },
+            { id: 'monthly-reports', label: '5. Unit Reports', icon: FileCheck, badge: reportsAwaitingReviewCount > 0 ? `${reportsAwaitingReviewCount} Pending` : `${monthlyReportsSubmittedCount}/${totalUnitsCount}` },
+            { id: 'department-overview', label: '6. Overview', icon: Building, badge: null },
             { id: 'pending-actions', label: '7. Pending Actions', icon: CheckSquare, badge: newMessagesCount + outstandingIssuesCount + reportsAwaitingReviewCount },
             { id: 'notifications', label: '8. Notifications', icon: Bell, badge: newMessagesCount > 0 ? `${newMessagesCount}` : null },
-            { id: 'historical-records', label: '9. Historical Records', icon: Archive, badge: null },
+            { id: 'historical-records', label: '9. Archives', icon: Archive, badge: null },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -422,13 +424,13 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 ${
                   isActive
                     ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
                 {tab.badge !== null && tab.badge !== undefined && (
                   <span
@@ -453,159 +455,159 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       {activeTab === 'overview' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           {/* Executive Real-Time Database Metrics (12 Summary Cards) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
             {/* Total Active Units */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
                 Total Active Units
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1">
                 {totalUnitsCount}
               </p>
-              <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-purple-600 dark:text-purple-400 font-bold mt-0.5 block truncate">
                 Full Ministry Coverage
               </span>
             </div>
 
             {/* Total Messages Received */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
                 Total Messages Received
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
                 {totalMessagesCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Direct Line submissions
               </span>
             </div>
 
             {/* New Messages Awaiting Review */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-amber-200 dark:border-amber-900/40 shadow-xs bg-amber-50/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">
-                New Messages Awaiting Review
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-amber-200 dark:border-amber-900/40 shadow-xs bg-amber-50/20">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block truncate">
+                New Messages Review
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">
                 {newMessagesCount}
               </p>
-              <span className="text-[11px] text-amber-700 dark:text-amber-300 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 font-bold mt-0.5 block truncate">
                 Requires HRD read
               </span>
             </div>
 
             {/* Total Complaints Received */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Total Complaints Received
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                Total Complaints
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white mt-0.5 sm:mt-1">
                 {totalComplaintsCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Across all stations
               </span>
             </div>
 
             {/* Urgent Complaints */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-rose-200 dark:border-rose-900/40 shadow-xs bg-rose-50/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block">
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-rose-200 dark:border-rose-900/40 shadow-xs bg-rose-50/20">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block truncate">
                 Urgent Complaints
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-rose-600 dark:text-rose-400 mt-0.5 sm:mt-1">
                 {urgentComplaintsCount}
               </p>
-              <span className="text-[11px] text-rose-700 dark:text-rose-300 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-rose-700 dark:text-rose-300 font-bold mt-0.5 block truncate">
                 High / Critical priority
               </span>
             </div>
 
             {/* Complaints Under Review */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Complaints Under Review
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                Under Review
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">
                 {complaintsUnderReviewCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Assigned for action
               </span>
             </div>
 
             {/* Resolved Complaints */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-emerald-200 dark:border-emerald-900/40 shadow-xs bg-emerald-50/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-emerald-200 dark:border-emerald-900/40 shadow-xs bg-emerald-50/20">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block truncate">
                 Resolved Complaints
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">
                 {resolvedComplaintsCount}
               </p>
-              <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-300 font-bold mt-0.5 block truncate">
                 Audit closed
               </span>
             </div>
 
             {/* Outstanding Issues */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
                 Outstanding Issues
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">
                 {outstandingIssuesCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Active follow-ups
               </span>
             </div>
 
             {/* Monthly Reports Submitted */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Monthly Reports Submitted ({selectedReportMonth})
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                Reports Submitted
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">
                 {monthlyReportsSubmittedCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Out of {totalUnitsCount} active units
               </span>
             </div>
 
             {/* Monthly Reports Awaiting Submission */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Reports Awaiting Submission
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                Awaiting Submission
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-rose-600 dark:text-rose-400 mt-0.5 sm:mt-1">
                 {monthlyReportsAwaitingSubmissionCount}
               </p>
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 block truncate">
                 Units pending filing
               </span>
             </div>
 
             {/* Reports Awaiting HRD Review */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-blue-200 dark:border-blue-900/40 shadow-xs bg-blue-50/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 block">
-                Reports Awaiting HRD Review
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-blue-200 dark:border-blue-900/40 shadow-xs bg-blue-50/20">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 block truncate">
+                Awaiting HRD Review
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
                 {reportsAwaitingReviewCount}
               </p>
-              <span className="text-[11px] text-blue-700 dark:text-blue-300 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-blue-700 dark:text-blue-300 font-bold mt-0.5 block truncate">
                 Requires leadership signoff
               </span>
             </div>
 
             {/* Upcoming Leadership Activities */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-amber-200 dark:border-amber-900/40 shadow-xs bg-amber-50/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">
-                Upcoming Leadership Activities
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-amber-200 dark:border-amber-900/40 shadow-xs bg-amber-50/20">
+              <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block truncate">
+                Leadership Activities
               </span>
-              <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">
                 {upcomingLeadershipActivitiesCount}
               </p>
-              <span className="text-[11px] text-amber-700 dark:text-amber-300 font-bold mt-0.5 block">
+              <span className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 font-bold mt-0.5 block truncate">
                 Assemblies on schedule
               </span>
             </div>
@@ -918,9 +920,34 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
           </div>
 
           {/* Master-Detail Layout */}
+          {/* Mobile view switcher tab (visible only on < lg screens) */}
+          <div className="flex lg:hidden items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mb-3 w-full">
+            <button
+              onClick={() => setMobileMessageView('list')}
+              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                mobileMessageView === 'list'
+                  ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Messages List ({filteredMessages.length})
+            </button>
+            <button
+              onClick={() => setMobileMessageView('detail')}
+              disabled={!selectedMessage}
+              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                mobileMessageView === 'detail'
+                  ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              Details {selectedMessage ? `(${selectedMessage.referenceNumber})` : ''}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Messages Master List */}
-            <div className="lg:col-span-1 space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
+            <div className={`lg:col-span-1 space-y-2.5 max-h-[750px] overflow-y-auto pr-1 ${mobileMessageView === 'detail' ? 'hidden lg:block' : 'block'}`}>
               {filteredMessages.length === 0 ? (
                 <div className="text-center py-10 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-400">
                   No departmental messages found matching filters.
@@ -931,7 +958,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                   return (
                     <div
                       key={msg.id}
-                      onClick={() => setSelectedMessageId(msg.id)}
+                      onClick={() => {
+                        setSelectedMessageId(msg.id);
+                        setMobileMessageView('detail');
+                      }}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${
                         isSelected
                           ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-1 ring-purple-500'
@@ -974,19 +1004,34 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             </div>
 
             {/* Message Detail & HRD Action Workspace */}
-            <div className="lg:col-span-2">
+            <div className={`lg:col-span-2 ${mobileMessageView === 'list' ? 'hidden lg:block' : 'block'}`}>
               {!selectedMessage ? (
-                <div className="p-12 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 text-center space-y-3">
                   <Inbox className="w-12 h-12 text-slate-300 mx-auto" />
                   <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                    Select a departmental message from the left to view details and reply
+                    Select a departmental message to view details and reply
                   </h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
                     Every message submitted to the HRD preserves full conversation history, private leadership notes, and resolution actions.
                   </p>
                 </div>
               ) : (
-                <div className="p-6 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+                <div className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+                  {/* Mobile Back Button */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobileMessageView('list')}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Messages List
+                    </button>
+                    <span className="font-mono text-[10px] text-slate-400">
+                      {selectedMessage.referenceNumber}
+                    </span>
+                  </div>
+
                   {/* Message Header */}
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
@@ -1192,9 +1237,34 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             </div>
           </div>
 
+          {/* Mobile View Switcher (Visible only on < lg screens) */}
+          <div className="flex lg:hidden items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mb-3 w-full">
+            <button
+              onClick={() => setMobileComplaintView('list')}
+              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                mobileComplaintView === 'list'
+                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Complaints ({filteredComplaints.length})
+            </button>
+            <button
+              onClick={() => setMobileComplaintView('detail')}
+              disabled={!selectedComplaint}
+              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all ${
+                mobileComplaintView === 'detail'
+                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              Investigation Detail {selectedComplaint ? `(${selectedComplaint.department})` : ''}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Complaints List */}
-            <div className="lg:col-span-1 space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
+            <div className={`lg:col-span-1 space-y-2.5 max-h-[750px] overflow-y-auto pr-1 ${mobileComplaintView === 'detail' ? 'hidden lg:block' : 'block'}`}>
               {filteredComplaints.length === 0 ? (
                 <div className="text-center py-10 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-400">
                   No complaints found matching filters.
@@ -1205,7 +1275,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                   return (
                     <div
                       key={c.id}
-                      onClick={() => setSelectedComplaintId(c.id)}
+                      onClick={() => {
+                        setSelectedComplaintId(c.id);
+                        setMobileComplaintView('detail');
+                      }}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${
                         isSelected
                           ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 ring-1 ring-rose-500'
@@ -1246,16 +1319,31 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             </div>
 
             {/* Complaint Detail Workspace */}
-            <div className="lg:col-span-2">
+            <div className={`lg:col-span-2 ${mobileComplaintView === 'list' ? 'hidden lg:block' : 'block'}`}>
               {!selectedComplaint ? (
-                <div className="p-12 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 text-center space-y-3">
                   <AlertTriangle className="w-12 h-12 text-slate-300 mx-auto" />
                   <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
                     Select a complaint to review investigation notes and issue directives
                   </h4>
                 </div>
               ) : (
-                <div className="p-6 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+                <div className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+                  {/* Mobile Back Button */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobileComplaintView('list')}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Complaints List
+                    </button>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">
+                      {selectedComplaint.department}
+                    </span>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1390,8 +1478,11 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
 
           {/* Reporting Table as Requested */}
           <div className="bg-white dark:bg-[#0E172B] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+            <div className="sm:hidden px-4 py-1.5 text-[10px] text-slate-400 italic bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+              Swipe sideways to view all columns &rarr;
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[620px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black uppercase text-slate-500 tracking-wider">
                     <th className="py-3.5 px-4">Department Unit</th>
@@ -1592,12 +1683,13 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                   key={msg.id}
                   onClick={() => {
                     setSelectedMessageId(msg.id);
+                    setMobileMessageView('detail');
                     setActiveTab('messages');
                   }}
-                  className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 hover:border-amber-400 transition-all cursor-pointer flex items-center justify-between gap-4"
+                  className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 hover:border-amber-400 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-bold">
+                    <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-bold shrink-0">
                       <Inbox className="w-4 h-4" />
                     </div>
                     <div>
@@ -1612,7 +1704,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs cursor-pointer">
+                  <button className="w-full sm:w-auto text-center shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs cursor-pointer">
                     Review Message
                   </button>
                 </div>
@@ -1626,12 +1718,13 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                   key={c.id}
                   onClick={() => {
                     setSelectedComplaintId(c.id);
+                    setMobileComplaintView('detail');
                     setActiveTab('complaints');
                   }}
-                  className="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 hover:border-rose-400 transition-all cursor-pointer flex items-center justify-between gap-4"
+                  className="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 hover:border-rose-400 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-rose-500 text-white font-bold">
+                    <div className="p-2.5 rounded-xl bg-rose-500 text-white font-bold shrink-0">
                       <AlertTriangle className="w-4 h-4" />
                     </div>
                     <div>
@@ -1646,7 +1739,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer">
+                  <button className="w-full sm:w-auto text-center shrink-0 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer">
                     Triage Issue
                   </button>
                 </div>
@@ -1664,10 +1757,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     setReviewRemarksText(rep.hodReviewNotes || '');
                     setReviewReportModalOpen(true);
                   }}
-                  className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 hover:border-blue-400 transition-all cursor-pointer flex items-center justify-between gap-4"
+                  className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 hover:border-blue-400 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-blue-600 text-white font-bold">
+                    <div className="p-2.5 rounded-xl bg-blue-600 text-white font-bold shrink-0">
                       <FileCheck className="w-4 h-4" />
                     </div>
                     <div>
@@ -1682,7 +1775,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer">
+                  <button className="w-full sm:w-auto text-center shrink-0 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer">
                     Evaluate & Sign
                   </button>
                 </div>
@@ -1710,17 +1803,17 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             {hrdMessages.slice(0, 5).map((m) => (
               <div
                 key={m.id}
-                className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4"
+                className="p-4 rounded-2xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold">
+                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold shrink-0">
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                       Direct message from {m.senderName} ({m.senderDepartment})
                     </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">"{m.subject}"</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">"{m.subject}"</p>
                   </div>
                 </div>
                 <span className="text-[10px] text-slate-400 shrink-0">
@@ -1791,8 +1884,8 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       {/* MODAL: SCHEDULE NEW ASSEMBLY                                         */}
       {/* ==================================================================== */}
       {isAddMeetingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <Users2 className="w-5 h-5 text-amber-500" />

@@ -254,10 +254,10 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070D18] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#070D18] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 overflow-x-hidden w-full max-w-full">
       {/* Active Operational Role Top Strip - Mobile responsive without horizontal overflow */}
       {isOperationalRoleActive && activeRoleDetails && (
-        <div className="bg-amber-400 text-slate-950 font-semibold px-3 sm:px-4 py-1.5 flex items-center justify-between text-xs border-b border-amber-500 shadow-xs z-40 animate-in slide-in-from-top-1 gap-2">
+        <div className="bg-amber-400 text-slate-950 font-semibold px-2.5 xs:px-3 sm:px-4 py-1.5 flex items-center justify-between text-xs border-b border-amber-500 shadow-xs z-40 animate-in slide-in-from-top-1 gap-2 max-w-full">
           <div className="flex items-center gap-1.5 min-w-0">
             {activeOperationalRole === 'hod' ? (
               <Crown className="w-4 h-4 text-slate-950 shrink-0" />
@@ -266,17 +266,18 @@ const MainLayout: React.FC = () => {
             )}
             <div className="flex items-center gap-1 min-w-0">
               <span className="font-bold truncate text-[11px] sm:text-xs text-slate-950">
-                Active Role: {activeRoleDetails.title}
+                Active: {activeRoleDetails.title}
               </span>
             </div>
           </div>
           <button
             onClick={exitOperationalRole}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer shadow-xs shrink-0"
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer shadow-xs shrink-0"
             title="Switch back to Member Mode"
           >
             <ArrowLeft className="w-3 h-3" />
-            <span>Switch to Member Mode</span>
+            <span className="hidden xs:inline">Switch to </span>
+            <span>Member Mode</span>
           </button>
         </div>
       )}
@@ -313,7 +314,7 @@ const MainLayout: React.FC = () => {
         />
 
         {/* Dynamic Page Body */}
-        <main className="flex-1 p-2.5 xs:p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-2 xs:p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto overflow-x-hidden">
           {renderActiveModule()}
         </main>
       </div>

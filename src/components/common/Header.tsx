@@ -46,9 +46,9 @@ export const Header: React.FC<HeaderProps> = ({
   const { isDark, toggleTheme, theme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 sm:h-18 px-2.5 xs:px-3.5 sm:px-6 bg-[#0B1D42] text-white border-b border-[#1A3366] shadow-sm print:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 sm:h-18 px-2 xs:px-3 sm:px-6 bg-[#0B1D42] text-white border-b border-[#1A3366] shadow-sm print:hidden max-w-full overflow-hidden w-full">
       {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+      <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
         <button
           onClick={onOpenMobileMenu}
           className="lg:hidden p-1.5 xs:p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer shrink-0"
@@ -57,15 +57,15 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 xs:gap-2 min-w-0">
-            <h1 className="text-xs xs:text-sm sm:text-base md:text-lg font-bold tracking-tight text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[280px] md:max-w-none">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h1 className="text-xs xs:text-sm sm:text-base md:text-lg font-bold tracking-tight text-white truncate">
               <span className="sm:hidden">{mobileTitle || activeTabTitle}</span>
               <span className="hidden sm:inline">{activeTabTitle}</span>
             </h1>
             {isVisitor && (
               <span className="hidden xs:inline-block px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-400 text-slate-950 uppercase tracking-wide shrink-0">
-                Desk Mode
+                Desk
               </span>
             )}
           </div>
@@ -79,12 +79,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Action Tools - Scaled and optimized for mobile screens */}
-      <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2 shrink-0">
-        {/* Fast Search Button (Responsive: icon button on mobile, label on md) */}
+      {/* Right Action Tools - Scaled and optimized for small screens (<= 600px) */}
+      <div className="flex items-center gap-1 xs:gap-1.5 shrink-0">
+        {/* Fast Search Button (Responsive: icon only on mobile, label on md) */}
         <button
           onClick={onOpenSearch}
-          className="h-8 px-2 sm:px-3 rounded-lg bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white border border-white/15 hover:border-blue-400/40 glow-blue-hover flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
+          className="h-8 w-8 sm:w-auto px-0 sm:px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white border border-white/15 hover:border-blue-400/40 glow-blue-hover flex items-center justify-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
           title="Quick Search & Actions (Books, Lost Property, Cells, Satellites)"
           aria-label="Quick Search"
         >
@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Notification Bell */}
         <button
           onClick={() => setIsDrawerOpen(true)}
-          className="relative p-1.5 xs:p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
+          className="relative h-8 w-8 flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
           title="View notifications"
           aria-label="View notifications"
         >
@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Theme Toggle (Light / Dark) */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 xs:p-2 text-blue-200 hover:text-amber-300 hover:bg-white/10 rounded-lg transition-all cursor-pointer relative shrink-0"
+          className="h-8 w-8 flex items-center justify-center text-blue-200 hover:text-amber-300 hover:bg-white/10 rounded-lg transition-all cursor-pointer relative shrink-0"
           title={`Switch to ${isDark ? 'Light' : 'Dark'} mode (Currently: ${theme})`}
           aria-label="Toggle theme"
         >
@@ -146,15 +146,15 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenReportToHRD && (
           <button
             onClick={onOpenReportToHRD}
-            className="h-8 px-2 xs:px-2.5 sm:px-3 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-xs border border-amber-300 hover:shadow-[0_0_12px_rgba(251,191,36,0.5)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="h-8 px-2 sm:px-3 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-xs border border-amber-300 hover:shadow-[0_0_12px_rgba(251,191,36,0.5)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
             title="REPORT TO HRD: Direct incident, inquiry, or operational report to Head of Department"
             aria-label="REPORT TO HRD"
           >
             <Send className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-            <span className="hidden md:inline font-extrabold uppercase tracking-tight text-[11px]">
+            <span className="hidden sm:inline font-extrabold uppercase tracking-tight text-[11px]">
               REPORT TO HRD
             </span>
-            <span className="md:hidden font-extrabold text-[10px] uppercase">
+            <span className="sm:hidden font-extrabold text-[10px] uppercase">
               HRD
             </span>
           </button>
@@ -163,10 +163,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Operational Department Role Switcher */}
         <RoleSwitcher onNavigateToWorkspace={onNavigate} onOpenModal={onOpenRoleModal} />
 
-        {/* Explicit Prominent Red Log Out Button - Always visible on all screens */}
+        {/* Explicit Prominent Red Log Out Button - Optimized icon-only on mobile */}
         <button
           onClick={logout}
-          className="h-8 px-2 xs:px-2.5 sm:px-3 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-xs border border-red-400/40 hover:shadow-[0_0_14px_rgba(239,68,68,0.5)] transition-all flex items-center gap-1 text-xs font-bold shrink-0 cursor-pointer"
+          className="h-8 w-8 sm:w-auto px-0 sm:px-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-xs border border-red-400/40 hover:shadow-[0_0_14px_rgba(239,68,68,0.5)] transition-all flex items-center justify-center gap-1 text-xs font-bold shrink-0 cursor-pointer"
           title="Log Out and end session"
           aria-label="Log Out"
         >

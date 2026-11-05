@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   FileCheck,
   Send,
+  X,
 } from 'lucide-react';
 import { FolderOpen } from 'lucide-react';
 import { Logo } from './Logo';
@@ -353,6 +354,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            aria-label="Close navigation sidebar"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 

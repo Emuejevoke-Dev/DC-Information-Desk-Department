@@ -718,7 +718,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => onNavigate('dress-code')}
                   className="btn-compact bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200"
@@ -1238,7 +1238,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
 
                 {/* Key Categories Summary Table */}
                 <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-                  <table className="w-full text-xs text-left">
+                  <table className="w-full min-w-[480px] text-xs text-left">
                     <thead className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <tr>
                         <th className="p-3">Report Category</th>
