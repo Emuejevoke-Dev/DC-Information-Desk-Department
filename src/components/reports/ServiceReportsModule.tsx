@@ -510,10 +510,10 @@ export const ServiceReportsModule: React.FC<ServiceReportsModuleProps> = ({
               <button
                 onClick={onOpenReportToHRD}
                 className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer border border-amber-300"
-                title="Send observation, incident or message directly to HRD"
+                title="Send observation, incident or message directly to HOD"
               >
                 <Send className="w-4 h-4 text-slate-950" />
-                <span>REPORT TO HRD</span>
+                <span>REPORT TO HOD</span>
               </button>
             )}
 

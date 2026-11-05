@@ -169,7 +169,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                 <span className="text-[11px] text-purple-200">Dominion City Asaba</span>
               </div>
               <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
-                REPORT TO HRD
+                REPORT TO HOD
               </h2>
             </div>
           </div>
@@ -198,7 +198,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
             }`}
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Submit Message to HRD</span>
+            <span>Submit Message to HOD</span>
           </button>
 
           <button
@@ -224,7 +224,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
           {activeTab === 'compose' && !submittedRef && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-                <strong>Private Executive Communication:</strong> Your message will be delivered directly to the Head of Department's (HRD) private leadership office. You will be assigned a unique reference code to track responses.
+                <strong>Private Executive Communication:</strong> Your message will be delivered directly to the Head of Department's (HOD) private leadership office. You will be assigned a unique reference code to track responses.
               </div>
 
               {/* Sender Details */}
@@ -455,7 +455,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                     <div className="text-center py-10 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
                       <MessageSquare className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
                       <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                        You have not submitted any messages to the HRD yet.
+                        You have not submitted any messages to the HOD yet.
                       </p>
                       <button
                         onClick={() => setActiveTab('compose')}
@@ -516,7 +516,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                           {msg.responses.length > 0 && (
                             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-300 text-[11px] font-semibold flex items-center gap-1.5">
                               <CornerDownRight className="w-3.5 h-3.5 text-purple-600" />
-                              <span>{msg.responses.length} HRD response(s) on this thread</span>
+                              <span>{msg.responses.length} HOD response(s) on this thread</span>
                             </div>
                           )}
                         </div>
@@ -577,7 +577,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
 
                     {selectedMessage.responses.length === 0 ? (
                       <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 text-xs text-slate-500 italic text-center">
-                        Your message has been received by the HRD Office. Responses or requests for clarification will appear here.
+                        Your message has been received by the HOD Office. Responses or requests for clarification will appear here.
                       </div>
                     ) : (
                       selectedMessage.responses.map((resp) => (
@@ -613,7 +613,7 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                     <textarea
                       rows={2}
                       required
-                      placeholder="Type your reply to the HRD..."
+                      placeholder="Type your reply to the HOD..."
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"

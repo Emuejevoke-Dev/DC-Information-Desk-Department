@@ -632,10 +632,10 @@ export const WelfareDashboard: React.FC<WelfareDashboardProps> = ({
             <button
               onClick={onOpenReportToHRD}
               className="btn-compact bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black shadow-md border border-amber-300 h-10 px-4 cursor-pointer flex items-center gap-1.5"
-              title="Escalate critical welfare emergency or confidential report directly to HRD"
+              title="Escalate critical welfare emergency or confidential report directly to HOD"
             >
               <Send className="w-4 h-4 text-slate-950" />
-              <span>REPORT TO HRD</span>
+              <span>REPORT TO HOD</span>
             </button>
           )}
         </div>

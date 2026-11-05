@@ -50,7 +50,7 @@ import { ShieldCheck, ArrowLeft, Crown } from 'lucide-react';
 
 const TAB_TITLES: Record<string, string> = {
   dashboard: 'Home — Dominion City Information Desk',
-  'hrd-office': 'HRD Office — Executive Leadership & Oversight Suite',
+  'hrd-office': 'HOD Office — Executive Leadership & Oversight Suite',
   directory: 'CELL FELLOWSHIP & SATELLITE CHURCH FOLDERS',
   kiosk: 'CELL FELLOWSHIP & SATELLITE CHURCH FOLDERS',
   'finance-workspace': 'Financial Officer Dedicated Workspace',
@@ -77,7 +77,7 @@ const TAB_TITLES: Record<string, string> = {
 
 const TAB_MOBILE_TITLES: Record<string, string> = {
   dashboard: 'Home',
-  'hrd-office': 'HRD Office',
+  'hrd-office': 'HOD Office',
   directory: 'Cell & Satellite Folders',
   kiosk: 'Cell & Satellite Folders',
   'finance-workspace': 'Finance Workspace',
@@ -296,7 +296,7 @@ const MainLayout: React.FC = () => {
 
       {/* Main App Content Area */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 pb-16 lg:pb-0 ${
+        className={`flex-1 flex flex-col transition-all duration-300 pb-24 lg:pb-0 ${
           sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
         }`}
       >
@@ -313,8 +313,8 @@ const MainLayout: React.FC = () => {
           onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
         />
 
-        {/* Dynamic Page Body */}
-        <main className="flex-1 p-2 xs:p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto overflow-x-hidden">
+        {/* Dynamic Page Body - Mobile-first padding with safe-area spacing */}
+        <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 lg:p-8 max-w-7xl w-full mx-auto overflow-x-hidden">
           {renderActiveModule()}
         </main>
       </div>

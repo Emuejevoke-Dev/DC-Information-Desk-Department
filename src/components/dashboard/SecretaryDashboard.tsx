@@ -642,7 +642,7 @@ export const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
               title="Send urgent incident, observation, or message to the Head of Department"
             >
               <Send className="w-4 h-4 text-slate-950" />
-              <span>REPORT TO HRD</span>
+              <span>REPORT TO HOD</span>
             </button>
           )}
         </div>

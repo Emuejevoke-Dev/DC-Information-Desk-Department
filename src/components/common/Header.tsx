@@ -79,12 +79,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Action Tools - Scaled and optimized for small screens (<= 600px) */}
-      <div className="flex items-center gap-1 xs:gap-1.5 shrink-0">
-        {/* Fast Search Button (Responsive: icon only on mobile, label on md) */}
+      {/* Right Action Tools - Scaled and optimized for Android mobile screens (<= 600px) */}
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        {/* Fast Search Button (Hidden on small mobile to give title and HOD button ample space) */}
         <button
           onClick={onOpenSearch}
-          className="h-8 w-8 sm:w-auto px-0 sm:px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white border border-white/15 hover:border-blue-400/40 glow-blue-hover flex items-center justify-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
+          className="hidden sm:flex h-8 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white border border-white/15 hover:border-blue-400/40 glow-blue-hover items-center justify-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
           title="Quick Search & Actions (Books, Lost Property, Cells, Satellites)"
           aria-label="Quick Search"
         >
@@ -128,10 +128,10 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* Theme Toggle (Light / Dark) */}
+        {/* Theme Toggle (Light / Dark - Hidden on small mobile to maintain clean header) */}
         <button
           onClick={toggleTheme}
-          className="h-8 w-8 flex items-center justify-center text-blue-200 hover:text-amber-300 hover:bg-white/10 rounded-lg transition-all cursor-pointer relative shrink-0"
+          className="hidden sm:flex h-8 w-8 items-center justify-center text-blue-200 hover:text-amber-300 hover:bg-white/10 rounded-lg transition-all cursor-pointer relative shrink-0"
           title={`Switch to ${isDark ? 'Light' : 'Dark'} mode (Currently: ${theme})`}
           aria-label="Toggle theme"
         >
@@ -142,20 +142,20 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* REPORT TO HRD Direct Line Button */}
+        {/* REPORT TO HOD Direct Line Button */}
         {onOpenReportToHRD && (
           <button
             onClick={onOpenReportToHRD}
             className="h-8 px-2 sm:px-3 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-xs border border-amber-300 hover:shadow-[0_0_12px_rgba(251,191,36,0.5)] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-            title="REPORT TO HRD: Direct incident, inquiry, or operational report to Head of Department"
-            aria-label="REPORT TO HRD"
+            title="REPORT TO HOD: Direct incident, inquiry, or operational report to Head of Department"
+            aria-label="REPORT TO HOD"
           >
             <Send className="w-3.5 h-3.5 text-slate-950 shrink-0" />
             <span className="hidden sm:inline font-extrabold uppercase tracking-tight text-[11px]">
-              REPORT TO HRD
+              REPORT TO HOD
             </span>
             <span className="sm:hidden font-extrabold text-[10px] uppercase">
-              HRD
+              HOD
             </span>
           </button>
         )}

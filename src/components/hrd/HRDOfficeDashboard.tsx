@@ -223,7 +223,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       {
         senderId: currentUser.id,
         senderName: currentUser.name,
-        senderRole: 'Head of Department (HRD)',
+        senderRole: 'Head of Department (HOD)',
         isFromHRD: true,
         message: hrdReplyInput.trim(),
       },
@@ -236,7 +236,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
   const handleSavePrivateNote = () => {
     if (!selectedMessageId) return;
     updateHRDMessageStatus(selectedMessageId, selectedMessage?.status || 'Under Review', hrdPrivateNoteInput.trim());
-    alert('Private HRD note saved successfully.');
+    alert('Private HOD note saved successfully.');
   };
 
   const handlePostComplaintDirective = (e: React.FormEvent) => {
@@ -270,7 +270,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       date: newMeetingForm.date,
       time: newMeetingForm.time,
       venue: newMeetingForm.venue.trim(),
-      organizer: `${currentUser.name} (HRD)`,
+      organizer: `${currentUser.name} (HOD)`,
       agendas,
       announcements,
       attendeesCount: 0,
@@ -291,7 +291,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
   };
 
   // ==========================================================================
-  // EXCLUSIVE SECURITY LOCKOUT SCREEN (Rendered if not authenticated as HRD)
+  // EXCLUSIVE SECURITY LOCKOUT SCREEN (Rendered if not authenticated as HOD)
   // ==========================================================================
   if (!isHOD || !canAccessHRDOffice) {
     return (
@@ -306,11 +306,11 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             Restricted Executive Sanctuary
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            HRD Office — Exclusive Leadership Workspace
+            HOD Office — Exclusive Leadership Workspace
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto leading-relaxed">
-            Access to this office is strictly reserved for the <strong>Head of Department (HRD)</strong>.
-            Operations Managers, Departmental Officers, and general members are not authorized to view HRD communications, private notes, or leadership assemblies.
+            Access to this office is strictly reserved for the <strong>Head of Department (HOD)</strong>.
+            Operations Managers, Departmental Officers, and general members are not authorized to view HOD communications, private notes, or leadership assemblies.
           </p>
         </div>
 
@@ -333,7 +333,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
             >
               <Crown className="w-4 h-4 text-slate-950" />
-              <span>Authenticate as HRD (Enter Passcode)</span>
+              <span>Authenticate as HOD (Enter Passcode)</span>
             </button>
           )}
 
@@ -375,7 +375,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-                  HRD OFFICE
+                  HOD OFFICE
                 </h1>
                 <p className="text-[11px] sm:text-xs text-purple-200 mt-0.5 leading-relaxed">
                   Exclusive Departmental Oversight, Inter-Unit Assemblies, Complaints Triage & Monthly Reports
@@ -403,12 +403,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       </div>
 
       {/* ==================================================================== */}
-      {/* 2. NINE NAVIGATION SECTIONS INSIDE HRD OFFICE                        */}
+      {/* 2. NINE NAVIGATION SECTIONS INSIDE HOD OFFICE                        */}
       {/* ==================================================================== */}
       <div className="bg-white dark:bg-[#0E172B] p-1.5 sm:p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1.5 min-w-max pb-0.5">
           {[
-            { id: 'overview', label: '1. HRD Overview', icon: LayoutDashboard, badge: null },
+            { id: 'overview', label: '1. HOD Overview', icon: LayoutDashboard, badge: null },
             { id: 'assemblies', label: '2. Assemblies', icon: Users2, badge: upcomingLeadershipActivitiesCount },
             { id: 'messages', label: '3. Messages', icon: Inbox, badge: newMessagesCount > 0 ? `${newMessagesCount} New` : totalMessagesCount },
             { id: 'complaints', label: '4. Complaints', icon: AlertTriangle, badge: outstandingIssuesCount > 0 ? `${outstandingIssuesCount} Open` : null },
@@ -434,11 +434,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                 <span>{tab.label}</span>
                 {tab.badge !== null && tab.badge !== undefined && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase ${
-                      isActive
-                        ? 'bg-slate-950 text-amber-300'
-                        : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
+                    className={`px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase ${isActive
+                      ? 'bg-slate-950 text-amber-300'
+                      : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'
+                      }`}
                   >
                     {tab.badge}
                   </span>
@@ -491,7 +490,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                 {newMessagesCount}
               </p>
               <span className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 font-bold mt-0.5 block truncate">
-                Requires HRD read
+                Requires HOD read
               </span>
             </div>
 
@@ -586,10 +585,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               </span>
             </div>
 
-            {/* Reports Awaiting HRD Review */}
+            {/* Reports Awaiting HOD Review */}
             <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-[#0E172B] border border-blue-200 dark:border-blue-900/40 shadow-xs bg-blue-50/20">
               <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 block truncate">
-                Awaiting HRD Review
+                Awaiting HOD Review
               </span>
               <p className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
                 {reportsAwaitingReviewCount}
@@ -615,13 +614,13 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
 
           {/* Recent Activity Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Messages to HRD */}
+            {/* Recent Messages to HOD */}
             <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Inbox className="w-5 h-5 text-purple-600" />
                   <h3 className="font-black text-sm text-slate-900 dark:text-white">
-                    Recent Direct Messages to HRD
+                    Recent Direct Messages to HOD
                   </h3>
                 </div>
                 <button
@@ -647,13 +646,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         {msg.referenceNumber} • {msg.senderDepartment}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                          msg.status === 'New'
-                            ? 'bg-amber-400 text-slate-950'
-                            : msg.status === 'Resolved'
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${msg.status === 'New'
+                          ? 'bg-amber-400 text-slate-950'
+                          : msg.status === 'Resolved'
                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                        }`}
+                          }`}
                       >
                         {msg.status}
                       </span>
@@ -704,13 +702,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         {cmp.department} • {cmp.category}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                          cmp.status === 'Resolved'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : cmp.status === 'Assigned'
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${cmp.status === 'Resolved'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : cmp.status === 'Assigned'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-rose-500 text-white'
-                        }`}
+                          }`}
                       >
                         {cmp.status}
                       </span>
@@ -773,11 +770,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       </h4>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase shrink-0 ${
-                        mtg.status === 'Completed'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                      }`}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase shrink-0 ${mtg.status === 'Completed'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        }`}
                     >
                       {mtg.status}
                     </span>
@@ -834,11 +830,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                                   ap.status === 'Completed' ? 'Pending' : 'Completed'
                                 )
                               }
-                              className={`px-2 py-1 rounded text-[10px] font-bold uppercase cursor-pointer ${
-                                ap.status === 'Completed'
-                                  ? 'bg-emerald-500 text-white'
-                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                              }`}
+                              className={`px-2 py-1 rounded text-[10px] font-bold uppercase cursor-pointer ${ap.status === 'Completed'
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                }`}
                             >
                               {ap.status}
                             </button>
@@ -866,7 +861,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
       )}
 
       {/* ==================================================================== */}
-      {/* SECTION 3: DEPARTMENTAL MESSAGES (HRD PRIVATE INBOX)                 */}
+      {/* SECTION 3: DEPARTMENTAL MESSAGES (HOD PRIVATE INBOX)                 */}
       {/* ==================================================================== */}
       {activeTab === 'messages' && (
         <div className="space-y-6 animate-in fade-in duration-150">
@@ -874,10 +869,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
             <div>
               <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Inbox className="w-5 h-5 text-purple-600" />
-                Departmental Messages (HRD Private Inbox)
+                Departmental Messages (HOD Private Inbox)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Centralized inbox for direct inquiries, requests, recommendations, and concerns submitted via REPORT TO HRD.
+                Centralized inbox for direct inquiries, requests, recommendations, and concerns submitted via REPORT TO HOD.
               </p>
             </div>
 
@@ -962,24 +957,22 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         setSelectedMessageId(msg.id);
                         setMobileMessageView('detail');
                       }}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${
-                        isSelected
-                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-1 ring-purple-500'
-                          : 'bg-white dark:bg-[#0E172B] border-slate-200 dark:border-slate-800 hover:border-purple-300'
-                      }`}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${isSelected
+                        ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-1 ring-purple-500'
+                        : 'bg-white dark:bg-[#0E172B] border-slate-200 dark:border-slate-800 hover:border-purple-300'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-[10px] font-black text-purple-600 dark:text-purple-400">
                           {msg.referenceNumber}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                            msg.status === 'New'
-                              ? 'bg-amber-400 text-slate-950'
-                              : msg.status === 'Resolved'
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${msg.status === 'New'
+                            ? 'bg-amber-400 text-slate-950'
+                            : msg.status === 'Resolved'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                               : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                          }`}
+                            }`}
                         >
                           {msg.status}
                         </span>
@@ -1003,7 +996,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
               )}
             </div>
 
-            {/* Message Detail & HRD Action Workspace */}
+            {/* Message Detail & HOD Action Workspace */}
             <div className={`lg:col-span-2 ${mobileMessageView === 'list' ? 'hidden lg:block' : 'block'}`}>
               {!selectedMessage ? (
                 <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 text-center space-y-3">
@@ -1012,7 +1005,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     Select a departmental message to view details and reply
                   </h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Every message submitted to the HRD preserves full conversation history, private leadership notes, and resolution actions.
+                    Every message submitted to the HOD preserves full conversation history, private leadership notes, and resolution actions.
                   </p>
                 </div>
               ) : (
@@ -1043,11 +1036,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                           {selectedMessage.category}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                            selectedMessage.urgency === 'Urgent'
-                              ? 'bg-rose-500 text-white'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                          }`}
+                          className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${selectedMessage.urgency === 'Urgent'
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}
                         >
                           {selectedMessage.urgency}
                         </span>
@@ -1067,11 +1059,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         <button
                           key={st}
                           onClick={() => updateHRDMessageStatus(selectedMessage.id, st)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                            selectedMessage.status === st
-                              ? 'bg-purple-600 text-white shadow-xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                          }`}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${selectedMessage.status === st
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                            }`}
                         >
                           {st}
                         </button>
@@ -1095,12 +1086,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     )}
                   </div>
 
-                  {/* Private HRD Notes (Only Visible to HRD) */}
+                  {/* Private HOD Notes (Only Visible to HOD) */}
                   <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5 text-amber-600" />
-                        Private HRD Leadership Notes (Hidden from sender)
+                        Private HOD Leadership Notes (Hidden from sender)
                       </span>
                       <button
                         onClick={handleSavePrivateNote}
@@ -1130,11 +1121,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       selectedMessage.responses.map((resp) => (
                         <div
                           key={resp.id}
-                          className={`p-3.5 rounded-2xl text-xs space-y-1 ${
-                            resp.isFromHRD
-                              ? 'bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 ml-4'
-                              : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mr-4'
-                          }`}
+                          className={`p-3.5 rounded-2xl text-xs space-y-1 ${resp.isFromHRD
+                            ? 'bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 ml-4'
+                            : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mr-4'
+                            }`}
                         >
                           <div className="flex items-center justify-between font-bold">
                             <span className={resp.isFromHRD ? 'text-purple-900 dark:text-purple-300' : 'text-slate-800 dark:text-slate-200'}>
@@ -1152,7 +1142,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     )}
                   </div>
 
-                  {/* HRD Response Composer */}
+                  {/* HOD Response Composer */}
                   <form onSubmit={handleSendHRDReply} className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                       Respond to {selectedMessage.senderName} (Visible in Sender's History)
@@ -1279,22 +1269,20 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         setSelectedComplaintId(c.id);
                         setMobileComplaintView('detail');
                       }}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${
-                        isSelected
-                          ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 ring-1 ring-rose-500'
-                          : 'bg-white dark:bg-[#0E172B] border-slate-200 dark:border-slate-800 hover:border-rose-300'
-                      }`}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-2 ${isSelected
+                        ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 ring-1 ring-rose-500'
+                        : 'bg-white dark:bg-[#0E172B] border-slate-200 dark:border-slate-800 hover:border-rose-300'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase text-rose-600">
                           {c.department} • {c.category}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                            c.status === 'Resolved'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-500 text-white'
-                          }`}
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${c.status === 'Resolved'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-rose-500 text-white'
+                            }`}
                         >
                           {c.status}
                         </span>
@@ -1366,12 +1354,11 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                       {(['Under Review', 'Assigned', 'Awaiting Action', 'Resolved', 'Closed'] as CentralComplaintStatus[]).map((st) => (
                         <button
                           key={st}
-                          onClick={() => updateComplaintStatus(selectedComplaint.id, st, `Status updated to ${st} by HRD`, currentUser.name)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                            selectedComplaint.status === st
-                              ? 'bg-rose-600 text-white shadow-xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                          }`}
+                          onClick={() => updateComplaintStatus(selectedComplaint.id, st, `Status updated to ${st} by HOD`, currentUser.name)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${selectedComplaint.status === st
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                            }`}
                         >
                           {st}
                         </button>
@@ -1419,7 +1406,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                   {/* Post Leadership Directive */}
                   <form onSubmit={handlePostComplaintDirective} className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Add HRD Leadership Directive / Comment
+                      Add HOD Leadership Directive / Comment
                     </label>
                     <textarea
                       rows={2}
@@ -1489,7 +1476,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     <th className="py-3.5 px-4">Month</th>
                     <th className="py-3.5 px-4">Submission Date</th>
                     <th className="py-3.5 px-4">Submission Status</th>
-                    <th className="py-3.5 px-4">HRD Review Status</th>
+                    <th className="py-3.5 px-4">HOD Review Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1509,13 +1496,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                         </td>
                         <td className="py-3.5 px-4">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                              !rep || rep.status === 'Not Started'
-                                ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                : rep.status === 'Draft'
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${!rep || rep.status === 'Not Started'
+                              ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                              : rep.status === 'Draft'
                                 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                 : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            }`}
+                              }`}
                           >
                             {rep ? rep.status : 'Not Started'}
                           </span>
@@ -1524,12 +1510,12 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                           {rep?.hodReviewNotes ? (
                             <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              Reviewed by HRD
+                              Reviewed by HOD
                             </span>
                           ) : rep?.status === 'Submitted' ? (
                             <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5" />
-                              Awaiting HRD Evaluation
+                              Awaiting HOD Evaluation
                             </span>
                           ) : (
                             <span className="text-[11px] text-slate-400">Pending Unit Filing</span>
@@ -1667,15 +1653,15 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
           <div className="p-5 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <CheckSquare className="w-5 h-5 text-amber-500" />
-              Consolidated HRD Pending Actions Queue
+              Consolidated HOD Pending Actions Queue
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Actionable items requiring HRD attention: unread messages, open complaints, submitted unit monthly reports, and meeting action items.
+              Actionable items requiring HOD attention: unread messages, open complaints, submitted unit monthly reports, and meeting action items.
             </p>
           </div>
 
           <div className="space-y-3">
-            {/* Messages Awaiting HRD Action */}
+            {/* Messages Awaiting HOD Action */}
             {hrdMessages
               .filter((m) => m.status === 'New' || m.status === 'Unread' || m.status === 'Awaiting Response')
               .map((msg) => (
@@ -1792,7 +1778,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
           <div className="p-5 rounded-3xl bg-white dark:bg-[#0E172B] border border-slate-200 dark:border-slate-800 shadow-xs">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Bell className="w-5 h-5 text-amber-500" />
-              HRD Real-Time Alerts & Leadership Pings
+              HOD Real-Time Alerts & Leadership Pings
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Live notifications generated when departmental members or officers submit reports, escalate care cases, or file monthly reports.
@@ -2086,10 +2072,10 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                 </div>
               </div>
 
-              {/* HRD Evaluation Action */}
+              {/* HOD Evaluation Action */}
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-3">
                 <span className="text-xs font-bold text-amber-900 dark:text-amber-200 block">
-                  HRD Leadership Review & Evaluation
+                  HOD Leadership Review & Evaluation
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -2107,7 +2093,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    HRD Feedback / Remarks to Unit Head
+                    HOD Feedback / Remarks to Unit Head
                   </label>
                   <textarea
                     rows={2}
@@ -2141,7 +2127,7 @@ export const HRDOfficeDashboard: React.FC<HRDOfficeDashboardProps> = ({
                     reviewMonthlyReport(
                       targetReportForReview.id,
                       reviewStatusChoice,
-                      reviewRemarksText.trim() || `Reviewed by HRD (${currentUser.name})`,
+                      reviewRemarksText.trim() || `Reviewed by HOD (${currentUser.name})`,
                       currentUser.name
                     );
                     setReviewReportModalOpen(false);

@@ -440,10 +440,10 @@ export const UniformLeaderDashboard: React.FC<UniformLeaderDashboardProps> = ({
             <button
               onClick={onOpenReportToHRD}
               className="btn-compact bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black shadow-md border border-amber-300"
-              title="Escalate uniform or grooming issues to HRD"
+              title="Escalate uniform or grooming issues to HOD"
             >
               <Send className="w-3.5 h-3.5 text-slate-950" />
-              <span>REPORT TO HRD</span>
+              <span>REPORT TO HOD</span>
             </button>
           )}
 

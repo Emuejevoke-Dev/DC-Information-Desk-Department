@@ -1798,7 +1798,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     msg: Omit<HRDDepartmentalMessage, 'id' | 'referenceNumber' | 'submissionDate' | 'status' | 'responses' | 'createdAt' | 'updatedAt'>
   ): HRDDepartmentalMessage => {
     const count = hrdMessages.length + 1;
-    const refNum = `HRD-MSG-2026-${String(count).padStart(4, '0')}`;
+    const refNum = `HOD-MSG-2026-${String(count).padStart(4, '0')}`;
     const now = new Date().toISOString();
     const newMsg: HRDDepartmentalMessage = {
       ...msg,

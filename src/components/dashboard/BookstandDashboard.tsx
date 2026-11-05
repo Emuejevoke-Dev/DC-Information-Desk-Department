@@ -576,10 +576,10 @@ export const BookstandDashboard: React.FC<BookstandDashboardProps> = ({
             <button
               onClick={onOpenReportToHRD}
               className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-md border border-amber-300 transition-all cursor-pointer"
-              title="Report incident, stock discrepancy, or complaint to HRD"
+              title="Report incident, stock discrepancy, or complaint to HOD"
             >
               <Send className="w-3.5 h-3.5 text-slate-950" />
-              <span>REPORT TO HRD</span>
+              <span>REPORT TO HOD</span>
             </button>
           )}
         </div>

@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         {
           id: 'hrd-office',
-          label: 'HRD Office',
+          label: 'HOD Office',
           icon: Crown,
           badge: isHOD ? 'Executive' : 'Restricted',
           badgeColor: isHOD ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-950/80 text-amber-300 border border-amber-700',
@@ -421,7 +421,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* Report to HRD Prominent Action Button */}
+        {/* Report to HOD Prominent Action Button */}
         {onOpenReportToHRD && (
           <div className="px-3 pb-2">
             <button
@@ -432,10 +432,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-950/40 border border-amber-300 cursor-pointer transition-all hover:scale-[1.02] ${
                 collapsed ? 'px-1' : 'px-3'
               }`}
-              title="REPORT TO HRD — Direct leadership messaging, inquiries & incidents"
+              title="REPORT TO HOD — Direct leadership messaging, inquiries & incidents"
             >
               <Send className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-              {!collapsed && <span className="tracking-wide">REPORT TO HRD</span>}
+              {!collapsed && <span className="tracking-wide">REPORT TO HOD</span>}
             </button>
           </div>
         )}
