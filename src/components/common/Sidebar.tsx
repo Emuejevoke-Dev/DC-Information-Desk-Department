@@ -355,13 +355,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-            aria-label="Close navigation sidebar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="lg:hidden flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                logout();
+              }}
+              className="py-1 px-2.5 rounded-lg bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-black transition-all cursor-pointer flex items-center gap-1 touch-manipulation shadow-xs border border-red-400/50"
+              title="Log Out and end session"
+              aria-label="Log Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="uppercase text-[11px]">Log Out</span>
+            </button>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0 touch-manipulation"
+              aria-label="Close navigation sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Navigation List */}
@@ -441,7 +455,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Footer Account Status & Prominent Mobile Log Out */}
-        <div className="p-3 bg-[#061024] border-t border-[#152B52] space-y-2">
+        <div className="p-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-[#061024] border-t border-[#152B52] space-y-2">
           <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/5">
             {currentUser.avatarUrl ? (
               <img
@@ -454,7 +468,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {currentUser.name.charAt(0)}
               </div>
             )}
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
                 <p className="text-[10px] text-blue-300 truncate">{currentUser.departmentRole}</p>
@@ -463,13 +477,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Prominent Log Out Button on Mobile & Expanded Sidebar */}
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <button
               onClick={() => {
                 setMobileOpen(false);
                 logout();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-950/60 border border-red-500/50 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-950/60 border border-red-500/50 cursor-pointer touch-manipulation"
               title="Log Out and end session"
               aria-label="Log Out"
             >

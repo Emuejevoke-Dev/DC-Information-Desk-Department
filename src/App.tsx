@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth, OPERATIONAL_ROLES_INFO } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -11,39 +11,39 @@ import { OperationalRoleModal } from './components/auth/OperationalRoleModal';
 // Components
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
-import { GlobalSearchModal } from './components/common/GlobalSearchModal';
 import { NotificationDrawer } from './components/common/NotificationDrawer';
 import { MobileBottomNav } from './components/common/MobileBottomNav';
 import { MyProfileModal } from './components/members/MyProfileModal';
 
-// Dedicated Officer & General Dashboards
+// Primary Landing Dashboard (Loaded eagerly for instant first paint)
 import { MainDashboard } from './components/dashboard/MainDashboard';
-import { FinanceDashboard } from './components/dashboard/FinanceDashboard';
-import { BookstandDashboard } from './components/dashboard/BookstandDashboard';
-import { SecretaryDashboard } from './components/dashboard/SecretaryDashboard';
-import { UniformLeaderDashboard } from './components/dresscode/UniformLeaderDashboard';
-import { WelfareDashboard } from './components/welfare/WelfareDashboard';
-import { CentralComplaintsModule } from './components/reports/CentralComplaintsModule';
-import { DepartmentMonthlyReportsHub } from './components/reports/DepartmentMonthlyReportsHub';
-import { HRDOfficeDashboard } from './components/hrd/HRDOfficeDashboard';
-import { ReportToHRDModal } from './components/hrd/ReportToHRDModal';
 
-// Operational Modules
-import { CellFellowshipSatelliteDirectory } from './components/cells/CellFellowshipSatelliteDirectory';
-import { MemberDirectoryModule } from './components/members/MemberDirectoryModule';
-import { BirthdayCalendarModule } from './components/birthdays/BirthdayCalendarModule';
-import { LostFoundModule } from './components/lost-found/LostFoundModule';
-import { NewsEventsModule } from './components/news/NewsEventsModule';
-import { ChurchInformationHandbookModule } from './components/handbook/ChurchInformationHandbookModule';
-import { AttendanceModule } from './components/attendance/AttendanceModule';
-import { DressCodeModule } from './components/dresscode/DressCodeModule';
-import { RosterModule } from './components/roster/RosterModule';
-import { MeetingsModule } from './components/meetings/MeetingsModule';
-import { ServiceReportsModule } from './components/reports/ServiceReportsModule';
-import { InformationCollectionModule } from './components/collections/InformationCollectionModule';
-import { FinanceModule } from './components/finance/FinanceModule';
-import { BookstandModule } from './components/bookstand/BookstandModule';
-import { DataManagementModal } from './components/backup/DataManagementModal';
+// Lazy Loaded Officer & Specialized Dashboards (Code-split to reduce mobile bundle size and eliminate lag)
+const FinanceDashboard = lazy(() => import('./components/dashboard/FinanceDashboard').then((m) => ({ default: m.FinanceDashboard })));
+const BookstandDashboard = lazy(() => import('./components/dashboard/BookstandDashboard').then((m) => ({ default: m.BookstandDashboard })));
+const SecretaryDashboard = lazy(() => import('./components/dashboard/SecretaryDashboard').then((m) => ({ default: m.SecretaryDashboard })));
+const UniformLeaderDashboard = lazy(() => import('./components/dresscode/UniformLeaderDashboard').then((m) => ({ default: m.UniformLeaderDashboard })));
+const WelfareDashboard = lazy(() => import('./components/welfare/WelfareDashboard').then((m) => ({ default: m.WelfareDashboard })));
+const HRDOfficeDashboard = lazy(() => import('./components/hrd/HRDOfficeDashboard').then((m) => ({ default: m.HRDOfficeDashboard })));
+const ReportToHRDModal = lazy(() => import('./components/hrd/ReportToHRDModal').then((m) => ({ default: m.ReportToHRDModal })));
+
+// Lazy Loaded Operational Modules
+const CellFellowshipSatelliteDirectory = lazy(() => import('./components/cells/CellFellowshipSatelliteDirectory').then((m) => ({ default: m.CellFellowshipSatelliteDirectory })));
+const MemberDirectoryModule = lazy(() => import('./components/members/MemberDirectoryModule').then((m) => ({ default: m.MemberDirectoryModule })));
+const BirthdayCalendarModule = lazy(() => import('./components/birthdays/BirthdayCalendarModule').then((m) => ({ default: m.BirthdayCalendarModule })));
+const LostFoundModule = lazy(() => import('./components/lost-found/LostFoundModule').then((m) => ({ default: m.LostFoundModule })));
+const NewsEventsModule = lazy(() => import('./components/news/NewsEventsModule').then((m) => ({ default: m.NewsEventsModule })));
+const ChurchInformationHandbookModule = lazy(() => import('./components/handbook/ChurchInformationHandbookModule').then((m) => ({ default: m.ChurchInformationHandbookModule })));
+const AttendanceModule = lazy(() => import('./components/attendance/AttendanceModule').then((m) => ({ default: m.AttendanceModule })));
+const DressCodeModule = lazy(() => import('./components/dresscode/DressCodeModule').then((m) => ({ default: m.DressCodeModule })));
+const RosterModule = lazy(() => import('./components/roster/RosterModule').then((m) => ({ default: m.RosterModule })));
+const MeetingsModule = lazy(() => import('./components/meetings/MeetingsModule').then((m) => ({ default: m.MeetingsModule })));
+const ServiceReportsModule = lazy(() => import('./components/reports/ServiceReportsModule').then((m) => ({ default: m.ServiceReportsModule })));
+const InformationCollectionModule = lazy(() => import('./components/collections/InformationCollectionModule').then((m) => ({ default: m.InformationCollectionModule })));
+const FinanceModule = lazy(() => import('./components/finance/FinanceModule').then((m) => ({ default: m.FinanceModule })));
+const BookstandModule = lazy(() => import('./components/bookstand/BookstandModule').then((m) => ({ default: m.BookstandModule })));
+const DataManagementModal = lazy(() => import('./components/backup/DataManagementModal').then((m) => ({ default: m.DataManagementModal })));
+const GlobalSearchModal = lazy(() => import('./components/common/GlobalSearchModal').then((m) => ({ default: m.GlobalSearchModal })));
 
 // Icons
 import { ShieldCheck, ArrowLeft, Crown } from 'lucide-react';
@@ -101,6 +101,27 @@ const TAB_MOBILE_TITLES: Record<string, string> = {
   bookstand: 'Book Stand',
   backup: 'Cloud Data & Sync',
 };
+
+const ModuleLoadingSkeleton = () => (
+  <div className="space-y-4 animate-pulse p-4 sm:p-6 bg-white dark:bg-[#0E172B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-lg w-48"></div>
+      <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded-lg w-20"></div>
+    </div>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl"></div>
+      <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl"></div>
+      <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl"></div>
+      <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl"></div>
+    </div>
+    <div className="h-56 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center">
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></div>
+        <span>Loading department workspace...</span>
+      </div>
+    </div>
+  </div>
+);
 
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -313,9 +334,11 @@ const MainLayout: React.FC = () => {
           onOpenReportToHRD={() => setIsReportToHRDModalOpen(true)}
         />
 
-        {/* Dynamic Page Body - Mobile-first padding with safe-area spacing */}
+        {/* Dynamic Page Body - Mobile-first padding with safe-area spacing and suspense code-splitting */}
         <main className="flex-1 px-3 py-3 sm:px-6 sm:py-6 lg:p-8 max-w-7xl w-full mx-auto overflow-x-hidden">
-          {renderActiveModule()}
+          <Suspense fallback={<ModuleLoadingSkeleton />}>
+            {renderActiveModule()}
+          </Suspense>
         </main>
       </div>
 
@@ -326,15 +349,17 @@ const MainLayout: React.FC = () => {
         onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
-      {/* Global Search & Quick Actions Modal */}
-      <GlobalSearchModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onNavigate={(mod) => {
-          setActiveTab(mod);
-          setIsSearchOpen(false);
-        }}
-      />
+      {/* Global Search & Quick Actions Modal (Lazy loaded on demand) */}
+      <Suspense fallback={null}>
+        <GlobalSearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          onNavigate={(mod) => {
+            setActiveTab(mod);
+            setIsSearchOpen(false);
+          }}
+        />
+      </Suspense>
 
       {/* Self-Service My Profile Modal */}
       <MyProfileModal
@@ -353,11 +378,13 @@ const MainLayout: React.FC = () => {
         }}
       />
 
-      {/* Direct Line: REPORT TO HRD Leadership Submission Modal */}
-      <ReportToHRDModal
-        isOpen={isReportToHRDModalOpen}
-        onClose={() => setIsReportToHRDModalOpen(false)}
-      />
+      {/* Direct Line: REPORT TO HOD Leadership Submission Modal (Lazy loaded) */}
+      <Suspense fallback={null}>
+        <ReportToHRDModal
+          isOpen={isReportToHRDModalOpen}
+          onClose={() => setIsReportToHRDModalOpen(false)}
+        />
+      </Suspense>
 
       {/* Notification Drawer */}
       <NotificationDrawer onNavigate={(mod) => setActiveTab(mod)} />

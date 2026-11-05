@@ -300,6 +300,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const STORAGE_PREFIX = 'dc_asaba_';
 
 function useStoredState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const isFirstMount = React.useRef(true);
   const [state, setState] = useState<T>(() => {
     try {
       const item = localStorage.getItem(STORAGE_PREFIX + key);
@@ -323,6 +324,10 @@ function useStoredState<T>(key: string, defaultValue: T): [T, React.Dispatch<Rea
   });
 
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state));
     } catch (e) {

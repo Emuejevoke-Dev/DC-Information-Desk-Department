@@ -28,22 +28,22 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
 
   // Short label for mobile display
   const getMobileRoleLabel = () => {
-    if (!activeOperationalRole) return 'Roles';
+    if (!activeOperationalRole) return 'Role';
     switch (activeOperationalRole) {
       case 'hod':
         return 'HOD';
       case 'operations':
         return 'Ops';
       case 'finance':
-        return 'Finance';
+        return 'Fin';
       case 'uniform':
-        return 'Uniform';
+        return 'Unif';
       case 'bookstand':
-        return 'Book Officer';
+        return 'Book';
       case 'secretary':
         return 'Sec';
       case 'welfare':
-        return 'Welfare';
+        return 'Welf';
       default:
         return 'Role';
     }
@@ -53,7 +53,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
     <>
       <button
         onClick={handleOpen}
-        className={`h-8 px-1.5 xs:px-2 sm:px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shrink-0 ${
+        className={`h-8 px-1.5 xs:px-2 sm:px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shrink-0 touch-manipulation ${
           isOperationalRoleActive
             ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border border-amber-300/80 hover:from-amber-300 hover:to-amber-400 glow-amber'
             : 'bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-blue-400/50 glow-blue-hover'
@@ -71,7 +71,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           />
         )}
         {/* Compact label for small mobile screens */}
-        <span className="sm:hidden font-black tracking-tight text-[10px] xs:text-[11px] truncate max-w-[50px] xs:max-w-[70px]">
+        <span className="sm:hidden font-black tracking-tight text-[10px] xs:text-[11px] truncate max-w-[32px] xs:max-w-[42px]">
           {getMobileRoleLabel()}
         </span>
         {/* Full label for sm and larger viewports */}

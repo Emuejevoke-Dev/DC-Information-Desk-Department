@@ -257,7 +257,7 @@ export const MyProfileModal: React.FC<MyProfileModalProps> = ({
                 onClose();
                 logout();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-98 text-white font-black text-xs shadow-md shadow-red-950/40 border border-red-500/50 transition-all cursor-pointer touch-manipulation"
             >
               <LogOut className="w-4 h-4" />
               <span>Log Out of Account</span>
