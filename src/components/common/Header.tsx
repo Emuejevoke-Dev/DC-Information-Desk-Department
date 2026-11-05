@@ -46,9 +46,9 @@ export const Header: React.FC<HeaderProps> = ({
   const { isDark, toggleTheme, theme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 sm:h-18 px-1.5 xs:px-2.5 sm:px-6 bg-[#0B1D42] text-white border-b border-[#1A3366] shadow-sm print:hidden max-w-full w-full">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 sm:h-18 px-2 sm:px-6 bg-[#0B1D42] text-white border-b border-[#1A3366] shadow-sm print:hidden max-w-full w-full box-border">
       {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-3 min-w-0 flex-1 mr-1 sm:mr-2">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1 mr-1.5 sm:mr-3">
         <button
           onClick={onOpenMobileMenu}
           className="lg:hidden p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer shrink-0 touch-manipulation"
@@ -79,8 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Action Tools - Scaled and optimized for Android mobile screens (<= 600px) */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      {/* Right Action Tools - Scaled and optimized so Exit button is NEVER cut off */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pr-1">
         {/* Fast Search Button (Hidden on small mobile to give title and HOD button ample space) */}
         <button
           onClick={onOpenSearch}
@@ -146,32 +146,34 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenReportToHRD && (
           <button
             onClick={onOpenReportToHRD}
-            className="h-8 px-1.5 xs:px-2 sm:px-3 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-xs shadow-xs border border-amber-300 hover:shadow-[0_0_12px_rgba(251,191,36,0.5)] transition-all flex items-center gap-1 sm:gap-1.5 shrink-0 cursor-pointer touch-manipulation"
+            className="h-8 px-2 sm:px-3 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-xs shadow-xs border border-amber-300 hover:shadow-[0_0_12px_rgba(251,191,36,0.5)] transition-all flex items-center gap-1 shrink-0 cursor-pointer touch-manipulation"
             title="REPORT TO HOD: Direct incident, inquiry, or operational report to Head of Department"
             aria-label="REPORT TO HOD"
           >
             <Send className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-            <span className="hidden sm:inline font-extrabold uppercase tracking-tight text-[11px]">
+            <span className="hidden md:inline font-extrabold uppercase tracking-tight text-[11px]">
               REPORT TO HOD
             </span>
-            <span className="sm:hidden font-extrabold text-[10px] uppercase">
+            <span className="md:hidden font-extrabold text-[10px] uppercase">
               HOD
             </span>
           </button>
         )}
 
-        {/* Operational Department Role Switcher */}
-        <RoleSwitcher onNavigateToWorkspace={onNavigate} onOpenModal={onOpenRoleModal} />
+        {/* Operational Department Role Switcher (Hidden on mobile to preserve Exit visibility; accessible via Drawer & Profile) */}
+        <div className="hidden sm:inline-flex">
+          <RoleSwitcher onNavigateToWorkspace={onNavigate} onOpenModal={onOpenRoleModal} />
+        </div>
 
-        {/* Explicit Prominent Red Log Out Button - Guaranteed Visible and Tappable on Mobile */}
+        {/* Explicit Prominent Red Log Out / Exit Button - Guaranteed 100% Fully Visible on Mobile */}
         <button
           onClick={logout}
-          className="h-8 sm:h-8.5 px-2 xs:px-2.5 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 active:scale-95 text-white shadow-xs border border-red-400/50 hover:shadow-[0_0_14px_rgba(239,68,68,0.5)] transition-all flex items-center justify-center gap-1 text-xs font-bold shrink-0 cursor-pointer touch-manipulation z-10"
+          className="h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:bg-red-700 active:scale-95 text-white shadow-md shadow-red-950/40 border border-red-400/60 hover:shadow-[0_0_14px_rgba(239,68,68,0.5)] transition-all flex items-center justify-center gap-1.5 text-xs font-black shrink-0 cursor-pointer touch-manipulation"
           title="Log Out and end session"
           aria-label="Log Out"
         >
           <LogOut className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-[10px] sm:text-xs font-bold sm:inline uppercase sm:normal-case">
+          <span className="text-[11px] sm:text-xs font-black uppercase sm:normal-case tracking-tight">
             <span className="sm:hidden">Exit</span>
             <span className="hidden sm:inline">Log Out</span>
           </span>
