@@ -191,11 +191,10 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
               setActiveTab('compose');
               setSubmittedRef(null);
             }}
-            className={`pb-3 px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'compose'
-                ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+            className={`pb-3 px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'compose'
+              ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
           >
             <Send className="w-3.5 h-3.5" />
             <span>Submit Message to HOD</span>
@@ -203,11 +202,10 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`pb-3 px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'history'
-                ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
+            className={`pb-3 px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'history'
+              ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>My Submission History</span>
@@ -329,15 +327,14 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                         key={lvl}
                         type="button"
                         onClick={() => setUrgency(lvl)}
-                        className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          urgency === lvl
-                            ? lvl === 'Urgent'
-                              ? 'bg-rose-600 text-white shadow-xs'
-                              : lvl === 'High'
+                        className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${urgency === lvl
+                          ? lvl === 'Urgent'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : lvl === 'High'
                               ? 'bg-amber-500 text-slate-950 shadow-xs'
                               : 'bg-purple-600 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                        }`}
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                          }`}
                       >
                         {lvl}
                       </button>
@@ -478,22 +475,20 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                             </span>
                             <div className="flex items-center gap-1.5">
                               <span
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                                  msg.status === 'Resolved'
-                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                    : msg.status === 'Under Review'
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${msg.status === 'Resolved'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : msg.status === 'Under Review'
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                                     : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                }`}
+                                  }`}
                               >
                                 {msg.status}
                               </span>
                               <span
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                                  msg.urgency === 'Urgent'
-                                    ? 'bg-rose-500 text-white'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                }`}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${msg.urgency === 'Urgent'
+                                  ? 'bg-rose-500 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                  }`}
                               >
                                 {msg.urgency}
                               </span>
@@ -583,11 +578,10 @@ export const ReportToHRDModal: React.FC<ReportToHRDModalProps> = ({
                       selectedMessage.responses.map((resp) => (
                         <div
                           key={resp.id}
-                          className={`p-3.5 rounded-2xl text-xs space-y-1 ${
-                            resp.isFromHRD
-                              ? 'bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 ml-4'
-                              : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mr-4'
-                          }`}
+                          className={`p-3.5 rounded-2xl text-xs space-y-1 ${resp.isFromHRD
+                            ? 'bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 ml-4'
+                            : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mr-4'
+                            }`}
                         >
                           <div className="flex items-center justify-between font-bold">
                             <span className={resp.isFromHRD ? 'text-purple-900 dark:text-purple-300' : 'text-slate-800 dark:text-slate-200'}>
